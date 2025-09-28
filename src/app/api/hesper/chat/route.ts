@@ -40,11 +40,11 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    // Forward as text/plain to n8n
+    // Forward as JSON to n8n
     const n8nRes = await fetch(N8N_WEBHOOK_URL, {
       method: "POST",
-      headers: { "Content-Type": "text/plain" },
-      body: message
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message, model })
     });
 
     if (!n8nRes.ok) {
