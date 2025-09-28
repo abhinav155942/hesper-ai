@@ -10,12 +10,29 @@ export async function POST(request: NextRequest) {
   }
 
   const userId = session.user.id;
-  const message = await request.text();
+
+  // Parse JSON body
+  let message: string;
+  let model: string;
+  try {
+    const body = await request.json();
+    message = body.message;
+    model = body.model || 'default';
+  } catch (e) {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
+
+  if (!message) {
+    return NextResponse.json({ error: "No message provided" }, { status: 400 });
+  }
 
   // Check credits before processing
   const creditsRes = await fetch(`${process.env.NEXTAUTH_URL || "http://localhost:3000"}/api/user/credits`, {
-    headers: { Authorization: `Bearer ${session.token}` }
+    headers: { Authorization: `Bearer ${await session.token}` }
   });
+  if (!creditsRes.ok) {
+    return NextResponse.json({ error: "Failed to check credits" }, { status: 500 });
+  }
   const { credits } = await creditsRes.json();
 
   if (credits < 1) {
@@ -23,42 +40,39 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    // Forward to n8n
-    const n8nRes = await fetch(`${process.env.N8N_WEBHOOK_URL}/webhook/hesper-chat`, {
+    // Forward as text/plain to n8n
+    const n8nRes = await fetch(N8N_WEBHOOK_URL, {
       method: "POST",
       headers: { "Content-Type": "text/plain" },
       body: message
     });
 
     if (!n8nRes.ok) {
-      throw new Error("n8n request failed");
+      const errorText = await n8nRes.text();
+      console.error("n8n error:", errorText);
+      throw new Error(`n8n request failed: ${n8nRes.status} ${errorText}`);
     }
 
     const n8nData = await n8nRes.text();
 
-    // Parse JSON if present
-    let responseText = n8nData;
-    try {
-      const parsed = JSON.parse(n8nData);
-      if (parsed.output) {
-        responseText = parsed.output;
-      }
-    } catch (e) {
-      // Not JSON, use as is
-    }
-
     // Deduct credit after successful response
-    await fetch(`${process.env.NEXTAUTH_URL || "http://localhost:3000"}/api/user/credits/deduct`, {
+    const deductRes = await fetch(`${process.env.NEXTAUTH_URL || "http://localhost:3000"}/api/user/credits/deduct`, {
       method: "POST",
       headers: { 
         "Content-Type": "application/json",
-        Authorization: `Bearer ${session.token}`
+        Authorization: `Bearer ${await session.token}`
       },
       body: JSON.stringify({ amount: 1 })
     });
 
-    return NextResponse.json({ response: responseText });
-  } catch (error) {
-    return NextResponse.json({ error: "Failed to process request" }, { status: 500 });
+    if (!deductRes.ok) {
+      console.error("Failed to deduct credits:", await deductRes.text());
+      // Don't fail the response if deduct fails, but log it
+    }
+
+    return NextResponse.json({ response: n8nData });
+  } catch (error: any) {
+    console.error("Chat error:", error);
+    return NextResponse.json({ error: error.message || "Failed to process request" }, { status: 500 });
   }
 }
