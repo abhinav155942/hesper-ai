@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useState, useRef, useEffect } from "react";
-import { Send, Mic, RotateCcw, Copy, ThumbsUp, ThumbsDown, Zap, Brain, ChevronDown, ChevronLeft } from 'lucide-react';
+import { Send, Mic, RotateCcw, Copy, ThumbsUp, ThumbsDown, Zap, Brain, ChevronDown, ChevronLeft, Upload } from 'lucide-react';
 import { toast } from "sonner";
 
 const N8N_WEBHOOK_URL = "/api/hesper/chat";
@@ -69,6 +69,7 @@ export default function ChatInterface({ selectedModel, onBack, initialMessage }:
   const [initialized, setInitialized] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const prevCountRef = useRef(0);
 
@@ -425,14 +426,24 @@ I'm here to help with a wide range of tasks including answering questions, helpi
               className="flex-grow bg-transparent text-base text-foreground placeholder-muted-foreground outline-none border-none py-2 sm:py-3 px-2 sm:px-4 disabled:opacity-50 min-w-0"
               style={{ WebkitAppearance: 'none' }}
             />
-
             
             <div className="flex items-center gap-0.5 sm:gap-1 sm:gap-2">
               <button
                 type="button"
+                disabled={isLoading}
+                onClick={() => fileInputRef.current?.click()}
+                className="p-1.5 sm:p-2 sm:p-2.5 rounded-full hover:bg-muted/80 transition-colors min-h-[36px] min-w-[36px] disabled:opacity-50"
+                aria-label="Attach file"
+              >
+                <Upload className="h-4 sm:h-5 w-4 sm:w-5 text-muted-foreground" />
+              </button>
+              
+              <button
+                type="button"
                 className="p-1.5 sm:p-2 sm:p-2.5 rounded-full hover:bg-muted/80 transition-colors min-h-[36px] min-w-[36px]"
-                aria-label="Use microphone">
-
+                aria-label="Use microphone"
+                disabled={isLoading}
+              >
                 <Mic className="h-4 sm:h-5 w-4 sm:w-5 text-muted-foreground" />
               </button>
               
@@ -441,12 +452,26 @@ I'm here to help with a wide range of tasks including answering questions, helpi
                 onClick={() => handleSend(inputValue)}
                 disabled={!inputValue.trim() || isLoading}
                 className="p-1.5 sm:p-2 sm:p-2.5 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed min-h-[36px] min-w-[36px]"
-                aria-label="Send message">
-
+                aria-label="Send message"
+              >
                 <Send className="h-4 sm:h-5 w-4 sm:w-5" />
               </button>
             </div>
           </div>
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) {
+                setInputValue(prev => `${prev} [attached: ${file.name}]`.trim());
+                inputRef.current?.focus();
+                e.target.value = '';
+              }
+            }}
+          />
         </form>
         
         <div className="text-center mt-2 sm:mt-3 hidden sm:block">
