@@ -39,18 +39,6 @@ const Header = ({ onMenuClick, selectedModel, onModelChange }: HeaderProps) => {
     checkSubscription();
   }, []);
 
-  // Trigger unverified users cleanup once per 24h
-  useEffect(() => {
-    const key = "cleanup_unverified_last_run";
-    const last = localStorage.getItem(key);
-    const now = Date.now();
-    if (!last || now - Number(last) > 24 * 60 * 60 * 1000) {
-      fetch("/api/cleanup/unverified", { method: "DELETE" }).finally(() => {
-        localStorage.setItem(key, String(now));
-      });
-    }
-  }, []);
-
   const fetchCredits = async () => {
     const token = localStorage.getItem("bearer_token");
     if (!token) {
