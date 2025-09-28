@@ -67,11 +67,46 @@ export default function ChatInterface({ selectedModel, onBack, initialMessage }:
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [hasNewMessages, setHasNewMessages] = useState(false);
   const [initialized, setInitialized] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const prevCountRef = useRef(0);
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
+
+  useEffect(() => {
+    if (!('SpeechRecognition' in window || 'webkitSpeechRecognition' in window)) {
+      return;
+    }
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.lang = 'en-US';
+
+    recognition.onstart = () => {
+      setIsRecording(true);
+    };
+
+    recognition.onresult = (event: SpeechRecognitionEvent) => {
+      const transcript = event.results[0][0].transcript;
+      setInputValue(transcript);
+      inputRef.current?.focus();
+    };
+
+    recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
+      toast.error(`Microphone error: ${event.error}`);
+      setIsRecording(false);
+    };
+
+    recognition.onend = () => {
+      setIsRecording(false);
+    };
+
+    recognitionRef.current = recognition;
+  }, []);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -270,6 +305,16 @@ I'm here to help with a wide range of tasks including answering questions, helpi
     }
   };
 
+  const handleMicClick = () => {
+    if (!recognitionRef.current || isLoading) return;
+
+    if (isRecording) {
+      recognitionRef.current.stop();
+    } else {
+      recognitionRef.current.start();
+    }
+  };
+
   const getModelInfo = () => {
     if (selectedModel === 'hesper-pro') {
       return {
@@ -440,11 +485,12 @@ I'm here to help with a wide range of tasks including answering questions, helpi
               
               <button
                 type="button"
-                className="p-1.5 sm:p-2 sm:p-2.5 rounded-full hover:bg-muted/80 transition-colors min-h-[36px] min-w-[36px]"
-                aria-label="Use microphone"
+                onClick={handleMicClick}
                 disabled={isLoading}
+                className={`p-1.5 sm:p-2 sm:p-2.5 rounded-full transition-colors min-h-[36px] min-w-[36px] ${isRecording ? 'bg-destructive/10 text-destructive' : 'hover:bg-muted/80 text-muted-foreground'}`}
+                aria-label={isRecording ? "Stop microphone" : "Use microphone"}
               >
-                <Mic className="h-4 sm:h-5 w-4 sm:w-5 text-muted-foreground" />
+                <Mic className={`h-4 sm:h-5 w-4 sm:w-5 ${isRecording ? 'animate-pulse' : ''}`} />
               </button>
               
               <button
