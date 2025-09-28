@@ -74,7 +74,7 @@ export default function ChatInterface({ selectedModel, onBack, initialMessage }:
   }, []);
 
   const handleInitialMessage = async (message: string) => {
-    const currentModelName = selectedModel === 'hesper-pro' ? 'Hesper Pro+' : 'Hesper Core';
+    const currentModelName = selectedModel === 'hesper-pro' ? "Hesper Pro" : "Hesper";
     const userMessage: Message = {
       id: `user-${Date.now()}`,
       type: 'user',
@@ -295,7 +295,7 @@ I'm here to help with a wide range of tasks including answering questions, helpi
             {message.type === 'assistant' &&
           <div className="flex items-center gap-2 mb-2">
                 {modelInfo.icon}
-                <span className="text-sm font-medium text-muted-foreground !w-20 !h-full">{message.modelName ?? modelInfo.name}</span>
+                <span className="text-sm font-medium text-muted-foreground !w-20 !h-full !whitespace-pre-line">{message.modelName ?? modelInfo.name}</span>
               </div>
           }
             <div>
