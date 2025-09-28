@@ -38,13 +38,6 @@ export default function MainContent({
     fetchCredits();
   }, []);
 
-  const actionButtons = [
-    "Help me plan",
-    "Explain something", 
-    "Save me time",
-    "Help me write"
-  ];
-
   const fetchCredits = async () => {
     const token = localStorage.getItem("bearer_token");
     if (!token) {
@@ -79,11 +72,6 @@ export default function MainContent({
     setChatMode(true);
   };
 
-  const handleActionButtonClick = (action: string) => {
-    setInputValue(action);
-    setChatMode(true);
-  };
-
   const handleBackToHome = () => {
     setChatMode(false);
     setInputValue("");
@@ -112,19 +100,6 @@ export default function MainContent({
           <h2 className="font-['Google_Sans'] font-normal text-4xl sm:text-5xl md:text-[56px] leading-[1.15] text-foreground/80 mt-1">
             your <span className="bg-gradient-to-r from-[#5f3dc4] via-[#ff6b6b] to-[#4ecdc4] bg-clip-text text-transparent">personal AI assistant</span>
           </h2>
-        </div>
-
-        {/* Action Buttons */}
-        <div className="flex flex-col sm:flex-row flex-wrap gap-3 justify-center mb-6 sm:mb-8 w-full max-w-[768px]">
-          {actionButtons.map((action, index) => (
-            <button
-              key={index}
-              onClick={() => handleActionButtonClick(action)}
-              className="px-4 py-2 bg-secondary rounded-full text-sm text-secondary-foreground hover:bg-accent transition-colors cursor-pointer w-full sm:w-auto"
-            >
-              {action}
-            </button>
-          ))}
         </div>
 
         <div className="w-full max-w-[768px] mb-4">
