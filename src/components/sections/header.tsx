@@ -1,10 +1,16 @@
 "use client";
 
 import * as React from "react";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Zap, Brain, Crown } from "lucide-react";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface HeaderProps {
   onMenuClick?: () => void;
@@ -13,15 +19,16 @@ interface HeaderProps {
 const Header = ({ onMenuClick }: HeaderProps) => {
   const [selectedModel, setSelectedModel] = React.useState("Hesper 1.0v");
   const [credits, setCredits] = useState(0);
+  const [isSubscribed, setIsSubscribed] = useState(false);
 
   useEffect(() => {
     fetchCredits();
+    checkSubscription();
   }, []);
 
   const fetchCredits = async () => {
     const token = localStorage.getItem("bearer_token");
     if (!token) {
-      // Don't toast in header, just set to 0
       setCredits(0);
       return;
     }
@@ -47,35 +54,135 @@ const Header = ({ onMenuClick }: HeaderProps) => {
     }
   };
 
+  const checkSubscription = () => {
+    // Mock subscription check - replace with actual logic
+    const subscription = localStorage.getItem("subscription_status");
+    setIsSubscribed(subscription === "active");
+  };
+
+  const getModelLimits = (modelId: string) => {
+    if (modelId === "hesper-1.0v") {
+      return isSubscribed ? "100 messages/day" : "30 messages/day";
+    } else if (modelId === "hesper-pro") {
+      return isSubscribed ? "50 messages/day" : "3 messages/day";
+    }
+    return "";
+  };
+
+  const models = [
+    {
+      id: "hesper-1.0v",
+      name: "Hesper 1.0v",
+      icon: Zap,
+      description: "Fast responses, general AI assistance",
+      limits: getModelLimits("hesper-1.0v"),
+      badge: "Free"
+    },
+    {
+      id: "hesper-pro",
+      name: "Hesper Pro",
+      icon: Brain,
+      description: "Advanced reasoning & research capabilities",
+      limits: getModelLimits("hesper-pro"),
+      badge: "Pro"
+    }
+  ];
+
+  const currentModel = models.find(m => m.name === selectedModel) || models[0];
+  const CurrentIcon = currentModel.icon;
+
   return (
-    <header className="flex h-16 w-full items-center justify-between border-b border-border bg-background px-6 font-sans">
+    <header className="flex h-16 w-full items-center justify-between border-b border-border bg-background px-4 md:px-6 font-sans">
       <div className="flex items-center gap-2">
         <span 
           className="text-[22px] font-medium bg-gradient-to-r from-purple-600 via-pink-500 to-teal-500 bg-clip-text text-transparent"
         >
           Hesper
         </span>
-        <button
-          className="flex items-center gap-1 rounded-md px-3 py-1.5 border border-border bg-background text-sm font-normal text-foreground transition-colors hover:bg-secondary focus:outline-none focus:ring-2 focus:ring-ring"
-          onClick={() =>
-            setSelectedModel((prev) => (prev === "Hesper 1.0v" ? "Hesper pro" : "Hesper 1.0v"))
-          }
-        >
-          {selectedModel}
-          <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
-        </button>
+        
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="flex items-center gap-2 rounded-md px-3 py-2 border border-border bg-background text-sm font-normal text-foreground transition-colors hover:bg-secondary focus:outline-none focus:ring-2 focus:ring-ring min-w-[140px] md:min-w-[160px]">
+              <CurrentIcon className="h-4 w-4 shrink-0" />
+              <span className="hidden sm:inline truncate">{selectedModel}</span>
+              <span className="sm:hidden truncate">{currentModel.name.split(' ')[1]}</span>
+              <ChevronDown className="h-4 w-4 shrink-0 opacity-50 ml-auto" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-[280px] md:w-[320px] p-2">
+            {models.map((model) => {
+              const Icon = model.icon;
+              const isSelected = selectedModel === model.name;
+              
+              return (
+                <DropdownMenuItem
+                  key={model.id}
+                  onClick={() => setSelectedModel(model.name)}
+                  className={`flex flex-col items-start gap-2 p-3 cursor-pointer rounded-md transition-colors ${
+                    isSelected ? 'bg-primary/10 border border-primary/20' : 'hover:bg-secondary'
+                  }`}
+                >
+                  <div className="flex items-center gap-2 w-full">
+                    <Icon className="h-4 w-4 shrink-0" />
+                    <span className="font-medium flex-1">{model.name}</span>
+                    <div className="flex items-center gap-2">
+                      {model.badge === "Pro" && <Crown className="h-3 w-3 text-amber-500" />}
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${
+                        model.badge === "Pro" 
+                          ? "bg-amber-100 text-amber-700" 
+                          : "bg-green-100 text-green-700"
+                      }`}>
+                        {model.badge}
+                      </span>
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    {model.description}
+                  </p>
+                  <div className="flex items-center justify-between w-full">
+                    <span className="text-xs text-muted-foreground">
+                      {model.limits}
+                    </span>
+                    {!isSubscribed && (
+                      <Link 
+                        href="/checkout" 
+                        className="text-xs text-primary hover:underline"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        Upgrade
+                      </Link>
+                    )}
+                  </div>
+                </DropdownMenuItem>
+              );
+            })}
+            
+            <div className="border-t mt-2 pt-2">
+              <Link 
+                href="/about-hesper"
+                className="flex items-center gap-2 p-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Learn more about Hesper models
+              </Link>
+            </div>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
-      <div className="flex items-center gap-6">
+      <div className="flex items-center gap-3 md:gap-6">
         <div className="text-sm text-muted-foreground flex items-center gap-2">
-          Credits: {credits} 💳
+          <span className="hidden sm:inline">Credits:</span>
+          <span className="sm:hidden">💳</span>
+          {credits}
+          <span className="hidden sm:inline">💳</span>
         </div>
 
         <Link
           href="/sign-in"
-          className="inline-flex h-9 items-center justify-center rounded-lg bg-primary px-6 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          className="inline-flex h-9 items-center justify-center rounded-lg bg-primary px-4 md:px-6 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         >
-          Sign in
+          <span className="hidden sm:inline">Sign in</span>
+          <span className="sm:inline md:hidden">Sign in</span>
         </Link>
       </div>
     </header>
