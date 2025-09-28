@@ -5,6 +5,7 @@ import { useState, useRef, useEffect } from "react";
 import { Send, Mic, RotateCcw, Copy, ThumbsUp, ThumbsDown, Zap, Brain, ChevronDown } from 'lucide-react';
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { DOMParser } from 'xmldom';
 
 const N8N_WEBHOOK_URL = "/api/hesper/chat";
 
@@ -43,7 +44,9 @@ interface Message {
   content: string;
   timestamp: Date;
   isTyping?: boolean;
-  modelName?: string; // freeze display name per message
+  modelName?: string;
+  isLeads?: boolean; // added for leads detection
+  originalContent?: string; // added for copy functionality
 }
 
 interface ChatInterfaceProps {
@@ -106,6 +109,74 @@ export default function ChatInterface({ selectedModel, onBack, initialMessage }:
     return () => el.removeEventListener('scroll', onScroll);
   }, []);
 
+  function parseLeadsToTable(htmlContent: string): { html: string; isLeads: boolean; originalContent: string } {
+    const original = htmlContent;
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(htmlContent, 'text/html');
+    const uls = doc.querySelectorAll('ul');
+    let rowsHtml = '';
+
+    uls.forEach(ul => {
+      const lis = ul.querySelectorAll('li');
+      if (lis.length !== 3) return;
+      let name = '';
+      let email = { text: '', href: '' };
+      let linkedin = { text: '', href: '' };
+
+      lis.forEach((li, i) => {
+        const text = li.textContent?.trim() || '';
+        if (text.startsWith('Name:')) {
+          name = text.replace('Name:', '').trim();
+        } else if (text.startsWith('Email:')) {
+          const a = li.querySelector('a');
+          if (a) {
+            email.text = a.textContent?.trim() || '';
+            email.href = a.getAttribute('href') || '';
+            if (email.href.startsWith('mailto:')) {
+              email.href = email.href.replace('mailto:', '');
+            }
+          } else {
+            email.text = text.replace('Email:', '').trim();
+          }
+        } else if (text.startsWith('LinkedIn:')) {
+          const a = li.querySelector('a');
+          if (a) {
+            linkedin.text = a.textContent?.trim() || '';
+            linkedin.href = a.getAttribute('href') || '';
+            if (linkedin.href && !linkedin.href.startsWith('http')) {
+              linkedin.href = 'https://www.linkedin.com/in/' + linkedin.text;
+            }
+          } else {
+            linkedin.text = text.replace('LinkedIn:', '').trim();
+          }
+        }
+      });
+
+      if (name) {
+        const emailLink = email.href || email.text 
+          ? `<a href="mailto:${email.href || email.text}" style="color:#0000ff;">${email.text}</a>` 
+          : email.text;
+        const liLink = linkedin.href && linkedin.text
+          ? `<a href="${linkedin.href}" style="color:#0000ff;">${linkedin.text}</a>` 
+          : linkedin.text;
+        rowsHtml += `<tr><td>${name}</td><td>${emailLink}</td><td>${liLink}</td></tr>`;
+      }
+    });
+
+    if (rowsHtml) {
+      const tableHtml = `
+        <div style="background-color:#e6f0ff; color:#000080; padding: 20px;">
+          <table border="1" cellpadding="5" cellspacing="0" bgcolor="#ffffff" style="border-color:#000080; color:#000080; border-collapse: collapse;">
+            <tr bgcolor="#cce0ff"><th>Name</th><th>Email</th><th>LinkedIn</th></tr>
+            ${rowsHtml}
+          </table>
+        </div>
+      `;
+      return { html: tableHtml, isLeads: true, originalContent: original };
+    }
+    return { html: original, isLeads: false, originalContent: original };
+  }
+
   const handleInitialMessage = async (message: string) => {
     const currentModelName = selectedModel === 'hesper-pro' ? "Hesper Pro" : "Hesper";
     const userMessage: Message = {
@@ -132,6 +203,7 @@ export default function ChatInterface({ selectedModel, onBack, initialMessage }:
 
     try {
       const reply = await fetchN8nReply(message, selectedModel);
+      const result = parseLeadsToTable(reply);
 
       // Remove typing indicator and add response
       setMessages((prev) => prev.filter((m) => !m.isTyping));
@@ -139,9 +211,11 @@ export default function ChatInterface({ selectedModel, onBack, initialMessage }:
       const assistantMessage: Message = {
         id: `assistant-${Date.now()}`,
         type: 'assistant',
-        content: reply || "",
+        content: result.html,
         timestamp: new Date(),
-        modelName: currentModelName
+        modelName: currentModelName,
+        isLeads: result.isLeads,
+        ...(result.isLeads && { originalContent: result.originalContent })
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
@@ -184,19 +258,22 @@ export default function ChatInterface({ selectedModel, onBack, initialMessage }:
 
     try {
       const reply = await fetchN8nReply(userMessage.content, selectedModel);
+      const result2 = parseLeadsToTable(reply);
 
       // Remove typing indicator
       setMessages((prev) => prev.filter((m) => !m.isTyping));
 
-      const assistantMessage: Message = {
+      const assistantMessage2: Message = {
         id: `assistant-${Date.now()}`,
         type: 'assistant',
-        content: reply || "",
+        content: result2.html,
         timestamp: new Date(),
-        modelName: currentModelName
+        modelName: currentModelName,
+        isLeads: result2.isLeads,
+        ...(result2.isLeads && { originalContent: result2.originalContent })
       };
 
-      setMessages((prev) => [...prev, assistantMessage]);
+      setMessages((prev) => [...prev, assistantMessage2]);
     } catch (error) {
       // Remove typing indicator
       setMessages((prev) => prev.filter((m) => !m.isTyping));
@@ -276,9 +353,19 @@ I'm here to help with a wide range of tasks including answering questions, helpi
     }
   };
 
-  const handleCopy = async (content: string) => {
+  const handleCopy = async (content: string, message?: Message) => {
     try {
-      await navigator.clipboard.writeText(content);
+      let textToCopy = content;
+      if (message?.isLeads && message.originalContent) {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(message.originalContent, 'text/html');
+        textToCopy = doc.body.textContent?.trim() || content;
+      } else if (message?.isLeads) {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(content, 'text/html');
+        textToCopy = doc.body.textContent?.trim() || content;
+      }
+      await navigator.clipboard.writeText(textToCopy);
       toast.success("Copied to clipboard");
     } catch (error) {
       toast.error("Failed to copy");
@@ -389,17 +476,18 @@ I'm here to help with a wide range of tasks including answering questions, helpi
             <div className="flex items-center gap-1" role="status" aria-live="polite">
                   <TypingTimer />
                 </div> :
-
-            <div className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">
-                  {message.content}
-                </div>
+                message.isLeads ?
+                  <div className="text-sm leading-relaxed" dangerouslySetInnerHTML={{ __html: message.content }} /> :
+                  <div className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">
+                    {message.content}
+                  </div>
             }
             </div>
 
             {message.type === 'assistant' && !message.isTyping &&
           <div className="flex items-center gap-2 mt-2">
                 <button
-              onClick={() => handleCopy(message.content)}
+              onClick={() => handleCopy(message.content, message)}
               className="p-1.5 rounded-lg hover:bg-muted transition-colors"
               title="Copy">
 
