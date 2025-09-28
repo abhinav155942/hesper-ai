@@ -1,7 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { Menu, Plus, Settings } from "lucide-react";
+import { Menu, Plus, Settings, Info, Smartphone, CreditCard, Building } from "lucide-react";
+import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -34,6 +35,14 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen, isMobile }: Sideb
   } else {
     sidebarClasses += " flex flex-col";
   }
+
+  const navigationLinks = [
+    { icon: Info, label: "About Hesper", href: "#" },
+    { icon: Smartphone, label: "Hesper App", href: "#" },
+    { icon: CreditCard, label: "Subscriptions", href: "#" },
+    { icon: Building, label: "For Business", href: "#" },
+    { icon: CreditCard, label: "Checkout", href: "/checkout" },
+  ];
 
   return (
     <TooltipProvider delayDuration={0}>
@@ -85,6 +94,37 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen, isMobile }: Sideb
               </TooltipContent>
             )}
           </Tooltip>
+        </div>
+
+        <div className="mt-6 flex flex-col space-y-2">
+          {navigationLinks.map((link, index) => (
+            <Tooltip key={index}>
+              <TooltipTrigger asChild>
+                <Link href={link.href}>
+                  <Button
+                    variant="ghost"
+                    className={`flex h-12 items-center text-sidebar-foreground transition-all duration-300 hover:bg-sidebar-accent ${
+                      sidebarOpen
+                        ? "w-full justify-start px-4"
+                        : "w-12 justify-center px-0"
+                    }`}
+                  >
+                    <link.icon className="h-5 w-5" />
+                    {sidebarOpen && (
+                      <span className="ml-3 whitespace-nowrap text-sm font-medium">
+                        {link.label}
+                      </span>
+                    )}
+                  </Button>
+                </Link>
+              </TooltipTrigger>
+              {!sidebarOpen && (
+                <TooltipContent side="right">
+                  <p>{link.label}</p>
+                </TooltipContent>
+              )}
+            </Tooltip>
+          ))}
         </div>
 
         <div
