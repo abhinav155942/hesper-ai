@@ -127,7 +127,7 @@ export default function ChatInterface({ selectedModel, onBack, initialMessage }:
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputValue.trim() || isLoading) return;
-    const currentModelName = selectedModel === 'hesper-pro' ? 'Hesper Pro' : 'Hesper Core';
+    const currentModelName = selectedModel === 'hesper-pro' ? 'Hesper Pro' : 'Hesper';
 
     const userMessage: Message = {
       id: `user-${Date.now()}`,
@@ -204,7 +204,7 @@ This is a thoughtful response from Hesper Pro. I've taken time to research and r
 
 Would you like me to explore any specific aspect of this topic in more detail?`;
     } else {
-      return `Thanks for your message! This is a quick response from Hesper 1.0v. I'm designed to provide fast, helpful responses to your everyday questions and tasks.
+      return `Thanks for your message! This is a quick response from Hesper. I'm designed to provide fast, helpful responses to your everyday questions and tasks.
 
 Your input: "${userInput}"
 
@@ -243,7 +243,7 @@ I'm here to help with a wide range of tasks including answering questions, helpi
     } else {
       return {
         icon: <Zap className="h-4 w-4" />,
-        name: "Hesper Core", // new display name going forward
+        name: "Hesper", // changed from "Hesper Core"
         description: "Fast general AI model"
       };
     }
