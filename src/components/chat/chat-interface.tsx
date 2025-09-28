@@ -23,14 +23,22 @@ async function fetchN8nReply(message: string, model: string): Promise<string> {
       throw new Error(errorText || `Webhook error: ${res.status}`);
     }
 
-    const contentType = res.headers.get("content-type") || "";
-    if (contentType.includes("application/json")) {
-      const data = await res.json();
-      return (
-        data.reply || data.message || data.text || data.content || JSON.stringify(data)
-      );
+    let responseText = await res.text();
+
+    // Always try to parse if it looks like JSON
+    if (responseText.trim().startsWith('{') && responseText.trim().endsWith('}')) {
+      try {
+        const data = JSON.parse(responseText);
+        return (
+          data.output || data.reply || data.message || data.text || data.content || responseText
+        );
+      } catch {
+        // If parsing fails, return as-is
+        return responseText;
+      }
     }
-    return await res.text();
+
+    return responseText;
   } catch (err: any) {
     throw new Error(err?.message || "Failed to contact chat service");
   }
