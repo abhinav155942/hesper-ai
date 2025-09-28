@@ -66,6 +66,7 @@ export default function ChatInterface({ selectedModel, onBack, initialMessage }:
   const [isTyping, setIsTyping] = useState(false);
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [hasNewMessages, setHasNewMessages] = useState(false);
+  const [initialized, setInitialized] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -94,8 +95,9 @@ export default function ChatInterface({ selectedModel, onBack, initialMessage }:
   useEffect(() => {
     inputRef.current?.focus();
 
-    // Handle initial message
-    if (initialMessage && messages.length === 0) {
+    // Handle initial message with guard for StrictMode double-mounts
+    if (initialMessage && messages.length === 0 && !initialized) {
+      setInitialized(true);
       handleInitialMessage(initialMessage);
     }
   }, [initialMessage]);
@@ -160,15 +162,14 @@ export default function ChatInterface({ selectedModel, onBack, initialMessage }:
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!inputValue.trim() || isLoading) return;
+  const handleSend = async (content: string) => {
+    if (!content.trim() || isLoading) return;
     const currentModelName = selectedModel === 'hesper-pro' ? 'Hesper Pro' : 'Hesper';
 
     const userMessage: Message = {
       id: `user-${Date.now()}`,
       type: 'user',
-      content: inputValue.trim(),
+      content: content.trim(),
       timestamp: new Date()
     };
 
@@ -211,6 +212,11 @@ export default function ChatInterface({ selectedModel, onBack, initialMessage }:
       setIsLoading(false);
       setIsTyping(false);
     }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    handleSend(inputValue);
   };
 
   const generateModelResponse = (userInput: string, model: string): string => {
@@ -428,7 +434,8 @@ I'm here to help with a wide range of tasks including answering questions, helpi
               </button>
               
               <button
-                type="submit"
+                type="button"
+                onClick={() => handleSend(inputValue)}
                 disabled={!inputValue.trim() || isLoading}
                 className="p-2.5 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 aria-label="Send message">
