@@ -310,31 +310,32 @@ I'm here to help with a wide range of tasks including answering questions, helpi
   };
 
   return (
-    <div className="relative flex flex-col min-h-[100dvh] w-full max-w-4xl mx-auto">
+    <div className="relative flex flex-col min-h-[100dvh] w-full max-w-4xl mx-auto px-0 sm:px-4">
       {/* Header */}
-      <div className="flex items-center justify-between p-3 sm:p-4 border-b border-border bg-card">
+      <div className="flex items-center justify-between p-2 border-b border-border bg-card">
         <button
           onClick={onBack}
-          className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">
+          className="text-xs sm:text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1 min-h-[36px]"
+        >
           <ChevronLeft className="h-4 w-4" />
           Back to homepage
         </button>
         
-        <div className="flex items-center gap-2 text-sm hidden sm:flex">
+        <div className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm hidden sm:flex">
           {modelInfo.icon}
-          <span className="font-medium">{modelInfo.name}</span>
+          <span className="font-medium truncate">{modelInfo.name}</span>
           <span className="text-muted-foreground">•</span>
-          <span className="text-muted-foreground">{modelInfo.description}</span>
+          <span className="text-muted-foreground truncate">{modelInfo.description}</span>
         </div>
       </div>
 
       {/* Messages Area */}
       <div
         ref={scrollContainerRef}
-        className="flex-1 overflow-y-auto p-3 sm:p-4 pb-2 scroll-smooth scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent"
+        className="flex-1 overflow-y-auto p-2 pb-1 scroll-smooth scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent"
         role="log"
         aria-live="polite">
-
+        
         {messages.length === 0 &&
         <div className="text-center py-12">
             <div className="mb-4 mx-auto w-8">
@@ -349,45 +350,45 @@ I'm here to help with a wide range of tasks including answering questions, helpi
 
         {messages.map((message, idx) =>
         <div key={message.id} className="w-full">
-            {idx > 0 && <div className="h-px bg-border my-4" />}
+            {idx > 0 && <div className="h-px bg-border my-3 sm:my-4" />}
             {message.type === 'assistant' &&
-          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mb-2">
+          <div className="flex items-center gap-1 sm:gap-2 mb-2">
                 {modelInfo.icon}
-                <span className="text-sm font-medium text-muted-foreground truncate">{message.modelName ?? modelInfo.name}</span>
+                <span className="text-xs sm:text-sm font-medium text-muted-foreground !w-20 !h-full !whitespace-pre-line">{message.modelName ?? modelInfo.name}</span>
               </div>
           }
-            <div>
+            <div className="pb-1 sm:pb-0">
               {message.isTyping ?
             <div className="flex items-center gap-1" role="status" aria-live="polite">
                   <TypingTimer />
                 </div> :
 
-            <div className="whitespace-pre-wrap text-sm leading-relaxed">
+            <div className="whitespace-pre-wrap text-sm leading-relaxed !text-black !bg-white !shadow-none !border-double break-words">
                   {message.content}
                 </div>
             }
             </div>
 
             {message.type === 'assistant' && !message.isTyping &&
-          <div className="flex flex-wrap items-center gap-1 sm:gap-2 mt-2">
+          <div className="flex items-center gap-1 sm:gap-2 mt-2 flex-wrap">
                 <button
               onClick={() => handleCopy(message.content)}
-              className="p-1 sm:p-1.5 rounded-lg hover:bg-muted transition-colors"
+              className="p-1.5 rounded-lg hover:bg-muted transition-colors min-h-[36px] min-w-[36px]"
               title="Copy">
 
-                  <Copy className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
+                  <Copy className="h-4 w-4 text-muted-foreground" />
                 </button>
                 <button
               onClick={handleRegenerate}
-              className="p-1 sm:p-1.5 rounded-lg hover:bg-muted transition-colors"
+              className="p-1.5 rounded-lg hover:bg-muted transition-colors"
               title="Regenerate">
 
                   <RotateCcw className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
                 </button>
-                <button className="p-1 sm:p-1.5 rounded-lg hover:bg-muted transition-colors" title="Good response">
+                <button className="p-1.5 rounded-lg hover:bg-muted transition-colors" title="Good response">
                   <ThumbsUp className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
                 </button>
-                <button className="p-1 sm:p-1.5 rounded-lg hover:bg-muted transition-colors" title="Bad response">
+                <button className="p-1.5 rounded-lg hover:bg-muted transition-colors" title="Bad response">
                   <ThumbsDown className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
                 </button>
               </div>
@@ -400,7 +401,7 @@ I'm here to help with a wide range of tasks including answering questions, helpi
       {showScrollButton &&
       <button
         onClick={scrollToBottom}
-        className="absolute bottom-24 sm:bottom-28 right-3 sm:right-4 z-10 inline-flex items-center gap-2 rounded-full bg-card border border-border px-3 py-2 shadow hover:bg-secondary transition-colors">
+        className="absolute bottom-20 sm:bottom-24 sm:bottom-28 right-2 sm:right-3 sm:right-4 z-10 inline-flex items-center gap-1 sm:gap-2 rounded-full bg-card border border-border px-2 sm:px-3 py-2 shadow hover:bg-secondary transition-colors min-h-[40px]">
 
           {hasNewMessages ?
         <span className="text-xs text-muted-foreground">New messages</span> :
@@ -411,9 +412,9 @@ I'm here to help with a wide range of tasks including answering questions, helpi
       }
 
       {/* Input Area */}
-      <div className="p-3 sm:p-4 border-t border-border bg-card pb-[env(safe-area-inset-bottom)]">
+      <div className="p-2 border-t border-border bg-card pb-[env(safe-area-inset-bottom)]">
         <form onSubmit={handleSubmit} className="relative">
-          <div className="flex items-center gap-2 sm:gap-3 bg-secondary rounded-full py-1.5 pl-4 sm:pl-6 pr-2 shadow-sm focus-within:ring-2 focus-within:ring-primary/20">
+          <div className="flex items-center gap-1 sm:gap-2 sm:gap-3 bg-secondary rounded-full py-1 pl-3 sm:pl-4 sm:pl-6 pr-1 sm:pr-2 shadow-sm focus-within:ring-2 focus-within:ring-primary/20 min-h-[44px]">
             <input
               ref={inputRef}
               type="text"
@@ -421,13 +422,15 @@ I'm here to help with a wide range of tasks including answering questions, helpi
               onChange={(e) => setInputValue(e.target.value)}
               placeholder={`Ask ${modelInfo.name}...`}
               disabled={isLoading}
-              className="flex-grow bg-transparent text-base text-foreground placeholder-muted-foreground outline-none border-none py-3 px-2 sm:px-4 disabled:opacity-50 min-w-0" />
+              className="flex-grow bg-transparent text-base text-foreground placeholder-muted-foreground outline-none border-none py-2 sm:py-3 px-2 sm:px-4 disabled:opacity-50 min-w-0"
+              style={{ WebkitAppearance: 'none' }}
+            />
 
             
-            <div className="flex items-center gap-1 sm:gap-2">
+            <div className="flex items-center gap-0.5 sm:gap-1 sm:gap-2">
               <button
                 type="button"
-                className="p-2 sm:p-2.5 rounded-full hover:bg-muted/80 transition-colors"
+                className="p-1.5 sm:p-2 sm:p-2.5 rounded-full hover:bg-muted/80 transition-colors min-h-[36px] min-w-[36px]"
                 aria-label="Use microphone">
 
                 <Mic className="h-4 sm:h-5 w-4 sm:w-5 text-muted-foreground" />
@@ -437,7 +440,7 @@ I'm here to help with a wide range of tasks including answering questions, helpi
                 type="button"
                 onClick={() => handleSend(inputValue)}
                 disabled={!inputValue.trim() || isLoading}
-                className="p-2 sm:p-2.5 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="p-1.5 sm:p-2 sm:p-2.5 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed min-h-[36px] min-w-[36px]"
                 aria-label="Send message">
 
                 <Send className="h-4 sm:h-5 w-4 sm:w-5" />
@@ -446,7 +449,7 @@ I'm here to help with a wide range of tasks including answering questions, helpi
           </div>
         </form>
         
-        <div className="text-center mt-3 hidden sm:block">
+        <div className="text-center mt-2 sm:mt-3 hidden sm:block">
           <p className="text-xs text-muted-foreground">
             {selectedModel === 'hesper-pro' ?
             "Pro model provides deeper analysis and research-backed responses" :
