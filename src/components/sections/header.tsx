@@ -208,7 +208,7 @@ const Header = ({ onMenuClick, selectedModel, onModelChange }: HeaderProps) => {
         </DropdownMenu>
       </div>
 
-      <div className="flex items-center gap-3 md:gap-6 !w-[319px] !h-5">
+      <div className="flex items-center gap-3 md:gap-6">
         <Link
           href="/subscriptions"
           className="text-sm text-muted-foreground hover:text-primary transition-colors">
