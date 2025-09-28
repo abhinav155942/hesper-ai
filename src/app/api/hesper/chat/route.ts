@@ -24,9 +24,20 @@ export async function POST(req: NextRequest) {
     const status = upstream.status;
 
     const text = await upstream.text();
-    return new Response(text, {
+    
+    let responseText = text;
+    if (contentType?.includes('application/json')) {
+      try {
+        const json = JSON.parse(text);
+        responseText = json.output || text;
+      } catch (e) {
+        // If JSON parsing fails, keep original text
+      }
+    }
+
+    return new Response(responseText, {
       status,
-      headers: { "Content-Type": contentType },
+      headers: { "Content-Type": "text/plain" },  // Always return as plain text
     });
   } catch (err: any) {
     return Response(
