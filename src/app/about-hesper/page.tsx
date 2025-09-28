@@ -1,3 +1,5 @@
+"use client";
+
 import { Zap, Brain, Crown, MessageCircle, Clock, Shield, Sparkles } from "lucide-react";
 
 export default function AboutHesperPage() {
