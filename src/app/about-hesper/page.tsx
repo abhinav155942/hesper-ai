@@ -216,6 +216,54 @@ export default function AboutHesperPage() {
           </div>
         </div>
 
+        {/* Extra Info Sections */}
+        <div className="grid gap-6 md:grid-cols-2 mt-12">
+          <div className="bg-card rounded-xl border border-border p-6">
+            <h3 className="text-lg font-medium mb-3">Reliability & Privacy</h3>
+            <ul className="text-sm text-muted-foreground space-y-2">
+              <li>• We do not train on your personal chats.</li>
+              <li>• Sessions auto-expire after inactivity to protect your data.</li>
+              <li>• Rate limiting keeps the service stable across models.</li>
+            </ul>
+          </div>
+          <div className="bg-card rounded-xl border border-border p-6">
+            <h3 className="text-lg font-medium mb-3">Latency & Limits</h3>
+            <ul className="text-sm text-muted-foreground space-y-2">
+              <li>• Hesper 1.0v: 1–3s typical latency</li>
+              <li>• Hesper Pro: 10–30s thoughtful responses</li>
+              <li>• Daily quotas reset at midnight UTC</li>
+            </ul>
+          </div>
+        </div>
+
+        <div className="grid gap-6 md:grid-cols-2 mt-6">
+          <div className="bg-card rounded-xl border border-border p-6">
+            <h3 className="text-lg font-medium mb-3">Roadmap</h3>
+            <ul className="text-sm text-muted-foreground space-y-2">
+              <li>• File uploads and document Q&A</li>
+              <li>• Image understanding and visual reasoning</li>
+              <li>• Workspace sharing and team plans</li>
+            </ul>
+          </div>
+          <div className="bg-card rounded-xl border border-border p-6">
+            <h3 className="text-lg font-medium mb-3">FAQ</h3>
+            <div className="space-y-3 text-sm text-muted-foreground">
+              <div>
+                <p className="font-medium text-foreground">Is Pro required for complex tasks?</p>
+                <p>Not always. Start with 1.0v; upgrade when you need deeper reasoning or research.</p>
+              </div>
+              <div>
+                <p className="font-medium text-foreground">Do messages roll over?</p>
+                <p>No. Limits reset daily to keep usage fair for everyone.</p>
+              </div>
+              <div>
+                <p className="font-medium text-foreground">Can I switch models mid‑chat?</p>
+                <p>Yes. You can switch anytime; behavior adapts immediately to your selection.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Footer */}
         <div className="text-center mt-12 text-sm text-muted-foreground">
           <p>
