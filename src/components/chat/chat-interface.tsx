@@ -12,7 +12,10 @@ async function fetchN8nReply(message: string, model: string): Promise<string> {
     const res = await fetch(N8N_WEBHOOK_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message, model }),
+      body: JSON.stringify({ 
+        message: JSON.stringify(message),  // Nested as JSON string
+        model 
+      }),
     });
 
     if (!res.ok) {
