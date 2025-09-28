@@ -23,29 +23,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Message is required" }, { status: 400 });
   }
 
-  try {
-    const webhookResponse = await fetch(N8N_WEBHOOK_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify([message]),
-    });
+  // Mock response since no webhook is connected
+  const mockResponse = { message: `Echo: ${message}. This is a mock AI response.` };
 
-    if (!webhookResponse.ok) {
-      const err = await webhookResponse.text();
-      return NextResponse.json({ error: err || "n8n workflow error" }, { status: 500 });
-    }
-
-    const data = await webhookResponse.json();
-
-    if (Array.isArray(data)) {
-      return NextResponse.json(data);
-    } else if (data && typeof data === "object" && "message" in data) {
-      return NextResponse.json({ message: data.message });
-    } else {
-      return NextResponse.json({ message: "No response received" });
-    }
-  } catch (err) {
-    console.error(err);
-    return NextResponse.json({ error: "Failed to process message" }, { status: 500 });
-  }
+  return NextResponse.json(mockResponse);
 }
