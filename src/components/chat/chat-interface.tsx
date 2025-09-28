@@ -5,6 +5,34 @@ import { useState, useRef, useEffect } from "react";
 import { Send, Mic, RotateCcw, Copy, ThumbsUp, ThumbsDown, Zap, Brain, ChevronDown } from 'lucide-react';
 import { toast } from "sonner";
 
+const N8N_WEBHOOK_URL = "/api/hesper/chat";
+
+async function fetchN8nReply(message: string, model: string): Promise<string> {
+  try {
+    const res = await fetch(N8N_WEBHOOK_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message, model }),
+    });
+
+    if (!res.ok) {
+      const errorText = await res.text().catch(() => "");
+      throw new Error(errorText || `Webhook error: ${res.status}`);
+    }
+
+    const contentType = res.headers.get("content-type") || "";
+    if (contentType.includes("application/json")) {
+      const data = await res.json();
+      return (
+        data.reply || data.message || data.text || data.content || JSON.stringify(data)
+      );
+    }
+    return await res.text();
+  } catch (err: any) {
+    throw new Error(err?.message || "Failed to contact chat service");
+  }
+}
+
 interface Message {
   id: string;
   type: 'user' | 'assistant';
@@ -98,23 +126,20 @@ export default function ChatInterface({ selectedModel, onBack, initialMessage }:
     setMessages((prev) => [...prev, typingMessage]);
 
     try {
-      // Simulate API call with different response times based on model
-      const responseTime = selectedModel === 'hesper-pro' ? 2500 : 1000;
-
-      await new Promise((resolve) => setTimeout(resolve, responseTime));
+      const reply = await fetchN8nReply(message, selectedModel);
 
       // Remove typing indicator and add response
-      const responseContent = generateModelResponse(message, selectedModel);
+      setMessages((prev) => prev.filter((m) => !m.isTyping));
 
       const assistantMessage: Message = {
         id: `assistant-${Date.now()}`,
         type: 'assistant',
-        content: responseContent,
+        content: reply || "",
         timestamp: new Date(),
         modelName: currentModelName
       };
 
-      setMessages([userMessage, assistantMessage]);
+      setMessages((prev) => [...prev, assistantMessage]);
     } catch (error) {
       setMessages([userMessage]);
       toast.error("Failed to get response. Please try again.");
@@ -153,21 +178,15 @@ export default function ChatInterface({ selectedModel, onBack, initialMessage }:
     setMessages((prev) => [...prev, typingMessage]);
 
     try {
-      // Simulate API call with different response times based on model
-      const responseTime = selectedModel === 'hesper-pro' ? 2500 : 1000;
-
-      await new Promise((resolve) => setTimeout(resolve, responseTime));
+      const reply = await fetchN8nReply(userMessage.content, selectedModel);
 
       // Remove typing indicator
       setMessages((prev) => prev.filter((m) => !m.isTyping));
 
-      // Generate response based on model
-      const responseContent = generateModelResponse(userMessage.content, selectedModel);
-
       const assistantMessage: Message = {
         id: `assistant-${Date.now()}`,
         type: 'assistant',
-        content: responseContent,
+        content: reply || "",
         timestamp: new Date(),
         modelName: currentModelName
       };
@@ -251,6 +270,28 @@ I'm here to help with a wide range of tasks including answering questions, helpi
 
   const modelInfo = getModelInfo();
 
+  // Typing timer that counts up indefinitely while visible
+  const TypingTimer: React.FC = () => {
+    const [elapsed, setElapsed] = useState(0);
+    useEffect(() => {
+      const start = Date.now();
+      const id = setInterval(() => {
+        setElapsed(Math.floor((Date.now() - start) / 1000));
+      }, 1000);
+      return () => clearInterval(id);
+    }, []);
+
+    const mm = String(Math.floor(elapsed / 60)).padStart(2, "0");
+    const ss = String(elapsed % 60).padStart(2, "0");
+
+    return (
+      <div className="inline-flex items-center gap-2 text-xs text-muted-foreground font-mono animate-pulse" role="status" aria-live="polite">
+        <span>runtime:</span>
+        <span>{mm}:{ss}</span>
+      </div>
+    );
+  };
+
   return (
     <div className="relative flex flex-col min-h-[100dvh] w-full max-w-4xl mx-auto">
       {/* Header */}
@@ -301,11 +342,7 @@ I'm here to help with a wide range of tasks including answering questions, helpi
             <div>
               {message.isTyping ?
             <div className="flex items-center gap-1" role="status" aria-live="polite">
-                  <div className="flex gap-1">
-                    <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                    <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                    <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
-                  </div>
+                  <TypingTimer />
                 </div> :
 
             <div className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">
