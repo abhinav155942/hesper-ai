@@ -8,14 +8,15 @@ import { useRouter } from "next/navigation";
 
 const N8N_WEBHOOK_URL = "/api/hesper/chat";
 
-async function fetchN8nReply(message: string, model: string): Promise<string> {
+async function fetchN8nReply(message: string, model: string, history?: {role: 'user'|'assistant', content: string}[]): Promise<string> {
   try {
     const res = await fetch(N8N_WEBHOOK_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ 
         message,
-        model 
+        model,
+        history: history || []
       }),
     });
 
@@ -178,6 +179,8 @@ export default function ChatInterface({ selectedModel, onBack, initialMessage }:
 
   const handleInitialMessage = async (message: string) => {
     const currentModelName = selectedModel === 'hesper-pro' ? "Hesper Pro" : "Hesper";
+    const pastMessages: {role: 'user'|'assistant', content: string}[] = [];
+
     const userMessage: Message = {
       id: `user-${Date.now()}`,
       type: 'user',
@@ -201,7 +204,7 @@ export default function ChatInterface({ selectedModel, onBack, initialMessage }:
     setMessages((prev) => [...prev, typingMessage]);
 
     try {
-      const reply = await fetchN8nReply(message, selectedModel);
+      const reply = await fetchN8nReply(message, selectedModel, pastMessages);
       const result = parseLeadsToTable(reply);
 
       // Remove typing indicator and add response
@@ -239,6 +242,12 @@ export default function ChatInterface({ selectedModel, onBack, initialMessage }:
       timestamp: new Date()
     };
 
+    // Compute history from current messages (before adding new user message)
+    const pastMessages = messages.slice(-5).map(m => ({
+      role: m.type === 'user' ? 'user' : 'assistant',
+      content: m.content
+    }));
+
     setMessages((prev) => [...prev, userMessage]);
     setInputValue("");
     setIsLoading(true);
@@ -256,7 +265,7 @@ export default function ChatInterface({ selectedModel, onBack, initialMessage }:
     setMessages((prev) => [...prev, typingMessage]);
 
     try {
-      const reply = await fetchN8nReply(userMessage.content, selectedModel);
+      const reply = await fetchN8nReply(userMessage.content, selectedModel, pastMessages);
       const result2 = parseLeadsToTable(reply);
 
       // Remove typing indicator

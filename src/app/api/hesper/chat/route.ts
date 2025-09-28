@@ -18,6 +18,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     message = body.message;
     model = body.model || 'default';
+    const history = body.history || [];
   } catch (e) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
@@ -44,7 +45,7 @@ export async function POST(request: NextRequest) {
     const n8nRes = await fetch(N8N_WEBHOOK_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message, model })
+      body: JSON.stringify({ message, model, history })
     });
 
     if (!n8nRes.ok) {
