@@ -129,9 +129,9 @@ export default function MainContent({
       </div>
       
       <footer className="w-full max-w-[768px] text-center pb-4 pt-2">
-        <p className="text-xs leading-relaxed text-muted-foreground !w-full !h-full">
+        <p className="text-xs leading-relaxed text-muted-foreground !w-full !h-[156px]">
           <a href="#" target="_blank" rel="noopener noreferrer" className="inline-block px-2 hover:underline">Terms and Conditions</a>,
-          <a href="#" target="_blank" rel="noopener noreferrer" className="inline-block px-2 hover:underline">Privacy Policy</a>, and
+          <a href="#" target="_blank" rel="noopener noreferrer" className="inline-block px-2 hover:underline"></a>, and
           <a href="#" target="_blank" rel="noopener noreferrer" className="inline-block px-2 hover:underline">Disclaimer</a> apply. Hesper can make mistakes, so double-check it.
         </p>
       </footer>
