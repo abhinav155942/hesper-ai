@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useState, useRef, useEffect } from "react";
-import { Send, Mic, RotateCcw, Copy, ThumbsUp, ThumbsDown, Zap, Brain } from 'lucide-react';
+import { Send, Mic, RotateCcw, Copy, ThumbsUp, ThumbsDown, Zap, Brain, ChevronDown } from 'lucide-react';
 import { toast } from "sonner";
 
 interface Message {
@@ -11,6 +11,7 @@ interface Message {
   content: string;
   timestamp: Date;
   isTyping?: boolean;
+  modelName?: string; // freeze display name per message
 }
 
 interface ChatInterfaceProps {
@@ -25,24 +26,30 @@ export default function ChatInterface({ selectedModel, onBack, initialMessage }:
   const [isLoading, setIsLoading] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [showScrollButton, setShowScrollButton] = useState(false);
+  const [hasNewMessages, setHasNewMessages] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const prevCountRef = useRef(0);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     setShowScrollButton(false);
+    setHasNewMessages(false);
   };
 
   useEffect(() => {
     const el = scrollContainerRef.current;
     if (!el) return;
     const isNearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 120;
+    const increased = messages.length > prevCountRef.current;
     if (isNearBottom) {
       scrollToBottom();
     } else {
       setShowScrollButton(true);
+      if (increased) setHasNewMessages(true);
     }
+    prevCountRef.current = messages.length;
   }, [messages]);
 
   useEffect(() => {
@@ -60,12 +67,14 @@ export default function ChatInterface({ selectedModel, onBack, initialMessage }:
     const onScroll = () => {
       const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 60;
       setShowScrollButton(!atBottom);
+      if (atBottom) setHasNewMessages(false);
     };
     el.addEventListener('scroll', onScroll, { passive: true });
     return () => el.removeEventListener('scroll', onScroll);
   }, []);
 
   const handleInitialMessage = async (message: string) => {
+    const currentModelName = selectedModel === 'hesper-pro' ? 'Hesper Pro+' : 'Hesper Core';
     const userMessage: Message = {
       id: `user-${Date.now()}`,
       type: 'user',
@@ -83,7 +92,8 @@ export default function ChatInterface({ selectedModel, onBack, initialMessage }:
       type: 'assistant',
       content: "",
       timestamp: new Date(),
-      isTyping: true
+      isTyping: true,
+      modelName: currentModelName
     };
     setMessages(prev => [...prev, typingMessage]);
 
@@ -100,7 +110,8 @@ export default function ChatInterface({ selectedModel, onBack, initialMessage }:
         id: `assistant-${Date.now()}`,
         type: 'assistant',
         content: responseContent,
-        timestamp: new Date()
+        timestamp: new Date(),
+        modelName: currentModelName
       };
 
       setMessages([userMessage, assistantMessage]);
@@ -116,6 +127,7 @@ export default function ChatInterface({ selectedModel, onBack, initialMessage }:
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputValue.trim() || isLoading) return;
+    const currentModelName = selectedModel === 'hesper-pro' ? 'Hesper Pro+' : 'Hesper Core';
 
     const userMessage: Message = {
       id: `user-${Date.now()}`,
@@ -135,7 +147,8 @@ export default function ChatInterface({ selectedModel, onBack, initialMessage }:
       type: 'assistant',
       content: "",
       timestamp: new Date(),
-      isTyping: true
+      isTyping: true,
+      modelName: currentModelName
     };
     setMessages(prev => [...prev, typingMessage]);
 
@@ -155,7 +168,8 @@ export default function ChatInterface({ selectedModel, onBack, initialMessage }:
         id: `assistant-${Date.now()}`,
         type: 'assistant',
         content: responseContent,
-        timestamp: new Date()
+        timestamp: new Date(),
+        modelName: currentModelName
       };
 
       setMessages(prev => [...prev, assistantMessage]);
@@ -223,13 +237,13 @@ I'm here to help with a wide range of tasks including answering questions, helpi
     if (selectedModel === 'hesper-pro') {
       return {
         icon: <Brain className="h-4 w-4" />,
-        name: "Hesper Pro",
+        name: "Hesper Pro+", // new display name going forward
         description: "Advanced reasoning model"
       };
     } else {
       return {
         icon: <Zap className="h-4 w-4" />,
-        name: "Hesper 1.0v",
+        name: "Hesper Core", // new display name going forward
         description: "Fast general AI model"
       };
     }
@@ -259,7 +273,7 @@ I'm here to help with a wide range of tasks including answering questions, helpi
       {/* Messages Area */}
       <div
         ref={scrollContainerRef}
-        className="flex-1 overflow-y-auto p-4 space-y-6 pb-28"
+        className="flex-1 overflow-y-auto p-4 pb-28"
         role="log"
         aria-live="polite"
       >
@@ -275,61 +289,55 @@ I'm here to help with a wide range of tasks including answering questions, helpi
           </div>
         )}
 
-        {messages.map((message) => (
-          <div key={message.id} className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`max-w-[80%] ${message.type === 'user' ? 'ml-12' : 'mr-12'}`}>
-              {message.type === 'assistant' && (
-                <div className="flex items-center gap-2 mb-2">
-                  {modelInfo.icon}
-                  <span className="text-sm font-medium text-muted-foreground">{modelInfo.name}</span>
-                </div>
-              )}
-              
-              <div className={`rounded-2xl px-4 py-3 ${
-                message.type === 'user' 
-                  ? 'bg-primary text-primary-foreground ml-auto' 
-                  : 'bg-secondary text-secondary-foreground'
-              }`}>
-                {message.isTyping ? (
-                  <div className="flex items-center gap-1" role="status" aria-live="polite">
-                    <div className="flex gap-1">
-                      <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                      <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                      <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="whitespace-pre-wrap text-sm leading-relaxed">
-                    {message.content}
-                  </div>
-                )}
+        {messages.map((message, idx) => (
+          <div key={message.id} className="w-full">
+            {idx > 0 && <div className="h-px bg-border my-4" />}
+            {message.type === 'assistant' && (
+              <div className="flex items-center gap-2 mb-2">
+                {modelInfo.icon}
+                <span className="text-sm font-medium text-muted-foreground">{message.modelName ?? modelInfo.name}</span>
               </div>
-
-              {message.type === 'assistant' && !message.isTyping && (
-                <div className="flex items-center gap-2 mt-2">
-                  <button
-                    onClick={() => handleCopy(message.content)}
-                    className="p-1.5 rounded-lg hover:bg-muted transition-colors"
-                    title="Copy"
-                  >
-                    <Copy className="h-4 w-4 text-muted-foreground" />
-                  </button>
-                  <button
-                    onClick={handleRegenerate}
-                    className="p-1.5 rounded-lg hover:bg-muted transition-colors"
-                    title="Regenerate"
-                  >
-                    <RotateCcw className="h-4 w-4 text-muted-foreground" />
-                  </button>
-                  <button className="p-1.5 rounded-lg hover:bg-muted transition-colors" title="Good response">
-                    <ThumbsUp className="h-4 w-4 text-muted-foreground" />
-                  </button>
-                  <button className="p-1.5 rounded-lg hover:bg-muted transition-colors" title="Bad response">
-                    <ThumbsDown className="h-4 w-4 text-muted-foreground" />
-                  </button>
+            )}
+            <div>
+              {message.isTyping ? (
+                <div className="flex items-center gap-1" role="status" aria-live="polite">
+                  <div className="flex gap-1">
+                    <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                    <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                    <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                  </div>
+                </div>
+              ) : (
+                <div className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">
+                  {message.content}
                 </div>
               )}
             </div>
+
+            {message.type === 'assistant' && !message.isTyping && (
+              <div className="flex items-center gap-2 mt-2">
+                <button
+                  onClick={() => handleCopy(message.content)}
+                  className="p-1.5 rounded-lg hover:bg-muted transition-colors"
+                  title="Copy"
+                >
+                  <Copy className="h-4 w-4 text-muted-foreground" />
+                </button>
+                <button
+                  onClick={handleRegenerate}
+                  className="p-1.5 rounded-lg hover:bg-muted transition-colors"
+                  title="Regenerate"
+                >
+                  <RotateCcw className="h-4 w-4 text-muted-foreground" />
+                </button>
+                <button className="p-1.5 rounded-lg hover:bg-muted transition-colors" title="Good response">
+                  <ThumbsUp className="h-4 w-4 text-muted-foreground" />
+                </button>
+                <button className="p-1.5 rounded-lg hover:bg-muted transition-colors" title="Bad response">
+                  <ThumbsDown className="h-4 w-4 text-muted-foreground" />
+                </button>
+              </div>
+            )}
           </div>
         ))}
         <div ref={messagesEndRef} />
@@ -340,7 +348,11 @@ I'm here to help with a wide range of tasks including answering questions, helpi
           onClick={scrollToBottom}
           className="absolute bottom-28 right-4 z-10 inline-flex items-center gap-2 rounded-full bg-card border border-border px-3 py-2 shadow hover:bg-secondary transition-colors"
         >
-          <span className="text-xs text-muted-foreground">New messages</span>
+          {hasNewMessages ? (
+            <span className="text-xs text-muted-foreground">New messages</span>
+          ) : (
+            <ChevronDown className="h-4 w-4 text-muted-foreground" />
+          )}
         </button>
       )}
 
