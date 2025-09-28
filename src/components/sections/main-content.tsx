@@ -102,7 +102,7 @@ export default function MainContent({
 
   return (
     <div className="flex flex-col items-center justify-center p-8">
-      <div className="w-full max-w-[900px] flex-grow flex flex-col items-center justify-center pt-16 sm:pt-0">
+      <div className="w-full max-w-[900px] flex flex-col items-center justify-center">
         
         <div className="text-center mb-10 w-full">
           <h1 className="font-['Google_Sans'] font-normal text-5xl sm:text-[56px] leading-[1.15] text-foreground/80">

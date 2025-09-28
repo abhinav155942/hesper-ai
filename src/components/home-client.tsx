@@ -50,12 +50,14 @@ export const HomeClient: React.FC = () => {
             onClick={() => setSidebarOpen(false)}
           />
         )}
-        <MainContent
-          selectedModel={selectedModel}
-          chatMode={chatMode}
-          onChatModeChange={setChatMode}
-          chatKey={chatKey}
-        />
+        <div className="flex-1 flex items-center justify-center overflow-auto">
+          <MainContent
+            selectedModel={selectedModel}
+            chatMode={chatMode}
+            onChatModeChange={setChatMode}
+            chatKey={chatKey}
+          />
+        </div>
       </div>
     </div>
   );

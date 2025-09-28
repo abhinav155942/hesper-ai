@@ -30,13 +30,20 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Initialize testing credits for new users if none present
+    let credits = userRecord[0].credits;
+    if (credits == null || credits <= 0) {
+      await db.update(user).set({ credits: 10 }).where(eq(user.id, currentUser.id));
+      credits = 10;
+    }
+
     // Return credits
     return NextResponse.json({
-      credits: userRecord[0].credits
+      credits
     });
 
   } catch (error) {
-    console.error('GET /api/credits error:', error);
+    console.error('GET /api/user/credits error:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
