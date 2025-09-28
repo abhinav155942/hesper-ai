@@ -13,11 +13,11 @@ interface MainContentProps {
   chatKey?: number;
 }
 
-export default function MainContent({ 
+export default function MainContent({
   selectedModel = 'hesper-1.0v',
   chatMode: externalChatMode,
   onChatModeChange,
-  chatKey 
+  chatKey
 }: MainContentProps) {
   const [internalChatMode, setInternalChatMode] = useState(externalChatMode || false);
   const [inputValue, setInputValue] = useState("");
@@ -67,7 +67,7 @@ export default function MainContent({
   const handleInputSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputValue.trim()) return;
-    
+
     // Switch to chat mode with the input message
     setChatMode(true);
   };
@@ -80,13 +80,13 @@ export default function MainContent({
   if (internalChatMode) {
     return (
       <div className="w-full h-full flex flex-col">
-        <ChatInterface 
-          selectedModel={selectedModel} 
-          onBack={() => setChatMode(false)} 
-          initialMessage={inputValue} 
-        />
-      </div>
-    );
+        <ChatInterface
+          selectedModel={selectedModel}
+          onBack={() => setChatMode(false)}
+          initialMessage={inputValue} />
+
+      </div>);
+
   }
 
   return (
@@ -110,14 +110,14 @@ export default function MainContent({
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 placeholder="Ask Hesper"
-                className="flex-grow bg-transparent text-base md:text-lg text-foreground placeholder-muted-foreground outline-none border-none py-3 px-2 sm:px-4"
-              />
+                className="flex-grow bg-transparent text-base md:text-lg text-foreground placeholder-muted-foreground outline-none border-none py-3 px-2 sm:px-4" />
 
-              <button 
+
+              <button
                 type="button"
-                className="p-2 rounded-full hover:bg-muted/80 transition-colors" 
-                aria-label="Use microphone"
-              >
+                className="p-2 rounded-full hover:bg-muted/80 transition-colors"
+                aria-label="Use microphone">
+
                 <Mic className="h-6 w-6 text-foreground/80" />
               </button>
             </div>
@@ -127,10 +127,10 @@ export default function MainContent({
       </div>
       
       <footer className="w-full max-w-[768px] text-center pb-4 pt-2">
-        <p className="text-xs leading-relaxed text-muted-foreground">
+        <p className="text-xs leading-relaxed text-muted-foreground !w-full !h-full">
           <a href="#" target="_blank" rel="noopener noreferrer" className="inline-block px-2 hover:underline">Hesper Terms</a> and the <a href="#" target="_blank" rel="noopener noreferrer" className="inline-block px-2 hover:underline">Hesper Privacy Policy</a> apply. Hesper can make mistakes, so double-check it.
         </p>
       </footer>
-    </div>
-  );
+    </div>);
+
 }
