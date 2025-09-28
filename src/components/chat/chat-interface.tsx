@@ -331,7 +331,7 @@ I'm here to help with a wide range of tasks including answering questions, helpi
       {/* Messages Area */}
       <div
         ref={scrollContainerRef}
-        className="flex-1 overflow-y-auto p-4 pb-28"
+        className="flex-1 overflow-y-auto p-4 pb-28 scroll-smooth scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent"
         role="log"
         aria-live="polite">
 
