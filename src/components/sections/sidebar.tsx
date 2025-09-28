@@ -21,7 +21,7 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ sidebarOpen, setSidebarOpen, isMobile, onNewChat }: SidebarProps) {
-  let sidebarClasses = "bg-sidebar-background p-2 transition-all duration-300 ease-in-out";
+  let sidebarClasses = "bg-card p-2 transition-all duration-300 ease-in-out";
   const hClasses = isMobile ? "h-screen" : "h-full";
   const wClasses = sidebarOpen ? (isMobile ? "w-full" : "w-[280px]") : "w-[72px]";
   
@@ -50,9 +50,9 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen, isMobile, onNewCh
     <TooltipProvider delayDuration={0}>
       <aside className={sidebarClasses}>
         <div
-          className={`mb-4 flex h-[56px] items-center ${
+          className={`mb-3 sm:mb-4 flex h-[56px] items-center ${
             sidebarOpen ? "justify-start ml-1" : "justify-center"
-          }`}
+          } min-h-[44px]`}
         >
           <Tooltip>
             <TooltipTrigger asChild>
@@ -60,7 +60,7 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen, isMobile, onNewCh
                 variant="ghost"
                 size="icon"
                 onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="h-12 w-12 rounded-full text-sidebar-foreground hover:bg-sidebar-accent"
+                className="h-12 w-12 rounded-full text-sidebar-foreground hover:bg-sidebar-accent min-h-[44px] min-w-[44px]"
               >
                 <Menu className="h-6 w-6" />
                 <span className="sr-only">Toggle sidebar</span>
@@ -98,7 +98,7 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen, isMobile, onNewCh
           </Tooltip>
         </div>
 
-        <div className="mt-6 flex flex-col space-y-2">
+        <div className="mt-4 sm:mt-6 flex flex-col space-y-2">
           {navigationLinks.map((link, index) => (
             <Tooltip key={index}>
               <TooltipTrigger asChild>
@@ -108,15 +108,15 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen, isMobile, onNewCh
                 >
                   <Button
                     variant="ghost"
-                    className={`flex h-12 items-center text-sidebar-foreground transition-all duration-300 hover:bg-sidebar-accent ${
+                    className={`flex h-12 items-center text-sidebar-foreground transition-all duration-300 hover:bg-sidebar-accent min-h-[44px] ${
                       sidebarOpen
-                        ? "w-full justify-start px-4"
+                        ? "w-full justify-start px-3 sm:px-4"
                         : "w-12 justify-center px-0"
                     }`}
                   >
                     <link.icon className="h-5 w-5" />
                     {sidebarOpen && (
-                      <span className="ml-3 whitespace-nowrap text-sm font-medium">
+                      <span className="ml-2 sm:ml-3 whitespace-nowrap text-sm font-medium truncate">
                         {link.label}
                       </span>
                     )}

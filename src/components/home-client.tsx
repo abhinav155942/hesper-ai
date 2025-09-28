@@ -4,7 +4,6 @@ import * as React from "react";
 import { useState, useEffect } from "react";
 import Header from "@/components/sections/header";
 import Sidebar from "@/components/sections/sidebar";
-import NotificationBanner from "@/components/sections/notification-banner";
 import MainContent from "@/components/sections/main-content";
 
 export const HomeClient: React.FC = () => {
@@ -30,8 +29,7 @@ export const HomeClient: React.FC = () => {
   };
 
   return (
-    <div className="flex h-screen flex-col bg-background">
-      <NotificationBanner />
+    <div className="flex h-screen flex-col bg-background overflow-hidden">
       <Header
         onMenuClick={() => setSidebarOpen(!sidebarOpen)}
         selectedModel={selectedModel}
@@ -50,7 +48,7 @@ export const HomeClient: React.FC = () => {
             onClick={() => setSidebarOpen(false)}
           />
         )}
-        <div className="flex-1 flex items-center justify-center overflow-auto">
+        <div className={`flex-1 overflow-auto ${isMobile ? 'w-full' : ''}`}>
           <MainContent
             selectedModel={selectedModel}
             chatMode={chatMode}
