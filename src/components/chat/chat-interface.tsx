@@ -5,7 +5,6 @@ import { useState, useRef, useEffect } from "react";
 import { Send, Mic, RotateCcw, Copy, ThumbsUp, ThumbsDown, Zap, Brain, ChevronDown } from 'lucide-react';
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
-import { DOMParser } from 'xmldom';
 
 const N8N_WEBHOOK_URL = "/api/hesper/chat";
 
@@ -357,10 +356,12 @@ I'm here to help with a wide range of tasks including answering questions, helpi
     try {
       let textToCopy = content;
       if (message?.isLeads && message.originalContent) {
+        // use built-in DOMParser
         const parser = new DOMParser();
         const doc = parser.parseFromString(message.originalContent, 'text/html');
         textToCopy = doc.body.textContent?.trim() || content;
       } else if (message?.isLeads) {
+        // use built-in DOMParser
         const parser = new DOMParser();
         const doc = parser.parseFromString(content, 'text/html');
         textToCopy = doc.body.textContent?.trim() || content;
