@@ -42,6 +42,7 @@ export default function SubscriptionsPage() {
   const [loading, setLoading] = useState(true);
   const [orderId, setOrderId] = useState<string | null>(null);
   const paypalClientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID as string | undefined;
+  const effectiveClientId = paypalClientId ?? "test"; // fallback to PayPal sandbox demo client-id so buttons render
 
   // Log PayPal environment hints at runtime (non-sensitive)
   useEffect(() => {
@@ -49,7 +50,7 @@ export default function SubscriptionsPage() {
       // Log only a short prefix to avoid exposing the full key
       console.log("[PayPal] Client ID prefix:", paypalClientId.slice(0, 10));
     } else {
-      console.warn("[PayPal] NEXT_PUBLIC_PAYPAL_CLIENT_ID is missing at runtime");
+      console.warn("[PayPal] NEXT_PUBLIC_PAYPAL_CLIENT_ID is missing — falling back to sandbox demo client-id");
     }
   }, [paypalClientId]);
 
@@ -148,7 +149,7 @@ export default function SubscriptionsPage() {
   const currentPlan = subscription?.plan || "free";
   const isExpired = subscription?.expiry && new Date(subscription.expiry) < new Date();
 
-  const showPayPal = !!session?.user && !!paypalClientId;
+  const showPayPal = !!session?.user; // always show when logged-in (falls back to sandbox if no client ID)
 
   return (
     <div className="container py-10">
@@ -162,13 +163,18 @@ export default function SubscriptionsPage() {
               {subscription.expiry && ` (Expires: ${new Date(subscription.expiry).toLocaleDateString()})`}
             </Badge>
           )}
+          {!paypalClientId && session?.user && (
+            <div className="mt-4 text-xs text-amber-600">
+              Sandbox mode: using demo PayPal client. Add NEXT_PUBLIC_PAYPAL_CLIENT_ID for live buttons.
+            </div>
+          )}
         </div>
 
         {showPayPal ? (
           <PayPalScriptProvider
-            key={paypalClientId}
+            key={effectiveClientId}
             options={{
-              "client-id": paypalClientId!,
+              "client-id": effectiveClientId!,
               currency: "USD",
               components: "buttons",
               intent: "capture",
@@ -268,12 +274,8 @@ export default function SubscriptionsPage() {
                         Sign in to subscribe
                       </Button>
                     ) : (
-                      <Button
-                        className="w-full"
-                        variant="secondary"
-                        onClick={() => toast.error("Payments are temporarily unavailable. Missing PayPal client ID.")}
-                      >
-                        PayPal unavailable
+                      <Button className="w-full" variant="secondary" disabled>
+                        Loading payments...
                       </Button>
                     )}
                   </CardContent>
