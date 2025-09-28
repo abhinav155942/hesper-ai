@@ -127,7 +127,7 @@ export default function ChatInterface({ selectedModel, onBack, initialMessage }:
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputValue.trim() || isLoading) return;
-    const currentModelName = selectedModel === 'hesper-pro' ? 'Hesper Pro+' : 'Hesper Core';
+    const currentModelName = selectedModel === 'hesper-pro' ? 'Hesper Pro' : 'Hesper Core';
 
     const userMessage: Message = {
       id: `user-${Date.now()}`,
@@ -237,7 +237,7 @@ I'm here to help with a wide range of tasks including answering questions, helpi
     if (selectedModel === 'hesper-pro') {
       return {
         icon: <Brain className="h-4 w-4" />,
-        name: "Hesper Pro+", // new display name going forward
+        name: "Hesper Pro", // new display name going forward
         description: "Advanced reasoning model"
       };
     } else {
