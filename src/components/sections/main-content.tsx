@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Mic } from 'lucide-react';
 import { toast } from "sonner";
 import ChatInterface from "@/components/chat/chat-interface";
@@ -22,6 +22,8 @@ export default function MainContent({
   const [internalChatMode, setInternalChatMode] = useState(externalChatMode || false);
   const [inputValue, setInputValue] = useState("");
   const [credits, setCredits] = useState(0);
+  const [isRecording, setIsRecording] = useState(false);
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
 
   useEffect(() => {
     if (externalChatMode !== undefined) {
@@ -77,6 +79,60 @@ export default function MainContent({
     setInputValue("");
   };
 
+  const startRecording = () => {
+    if (!('webkitSpeechRecognition' in window)) {
+      toast.error("Speech recognition not supported in this browser");
+      return;
+    }
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'en-US';
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+
+    recognition.onstart = () => {
+      setIsRecording(true);
+      toast.success("Listening... Speak now!");
+    };
+
+    recognition.onresult = (event: SpeechRecognitionEvent) => {
+      const transcript = event.results[0][0].transcript;
+      setInputValue(transcript);
+    };
+
+    recognition.onend = () => {
+      setIsRecording(false);
+    };
+
+    recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
+      setIsRecording(false);
+      if (event.error === 'not-allowed') {
+        toast.error("Microphone access denied. Please allow access and try again.");
+      } else {
+        toast.error("Voice input failed. Please try again.");
+      }
+    };
+
+    recognition.start();
+    recognitionRef.current = recognition;
+  };
+
+  const stopRecording = () => {
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+    }
+    setIsRecording(false);
+  };
+
+  const toggleRecording = () => {
+    if (isRecording) {
+      stopRecording();
+    } else {
+      startRecording();
+    }
+  };
+
   if (internalChatMode) {
     return (
       <div className="w-full h-full flex flex-col">
@@ -84,7 +140,6 @@ export default function MainContent({
           selectedModel={selectedModel}
           onBack={() => setChatMode(false)}
           initialMessage={inputValue} />
-
       </div>);
 
   }
@@ -116,10 +171,12 @@ export default function MainContent({
 
                 <button
                   type="button"
-                  className="p-2 rounded-full hover:bg-muted/80 transition-colors"
-                  aria-label="Use microphone">
+                  onClick={toggleRecording}
+                  disabled={isRecording}
+                  className={`p-2 rounded-full transition-colors ${isRecording ? 'animate-pulse bg-primary/10 text-primary' : 'hover:bg-muted/80'}`}
+                  aria-label={isRecording ? "Stop microphone" : "Use microphone"}>
 
-                  <Mic className="h-6 w-6 text-foreground/80" />
+                  <Mic className={`h-6 w-6 ${isRecording ? 'text-primary' : 'text-foreground/80'}`} />
                 </button>
               </div>
             </form>
