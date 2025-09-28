@@ -1,30 +1,37 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 
 const N8N_WEBHOOK_URL = "https://abhinavt333.app.n8n.cloud/webhook/f36d4e7e-9b5a-4834-adb7-cf088808c191/chat";
 
-interface ResponseData {
-  message?: string;
-  error?: string;
-}
-
-export async function POST(request: NextRequest) {
-  if (request.method !== "POST") return NextResponse.json({ error: "Method not allowed" }, { status: 405 });
-
-  let body;
+export async function POST(req: NextRequest) {
   try {
-    body = await request.json();
-  } catch (e) {
-    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+    const body = await req.json();
+    const message = body?.message ?? body?.prompt ?? body?.text ?? body?.query ?? "";
+
+    if (!message) {
+      return Response.json({ error: "No message provided" }, { status: 400 });
+    }
+
+    // Send only the raw message as plain text to n8n
+    const upstream = await fetch(N8N_WEBHOOK_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "text/plain",
+      },
+      body: message, // Raw text, no JSON
+    });
+
+    const contentType = upstream.headers.get("content-type") || "text/plain";
+    const status = upstream.status;
+
+    const text = await upstream.text();
+    return new Response(text, {
+      status,
+      headers: { "Content-Type": contentType },
+    });
+  } catch (err: any) {
+    return Response(
+      `Error: ${err?.message || "Unknown error"}`,
+      { status: 500 }
+    );
   }
-
-  const { message } = body;
-
-  if (!message || !message.trim()) {
-    return NextResponse.json({ error: "Message is required" }, { status: 400 });
-  }
-
-  // Mock response since no webhook is connected
-  const mockResponse = { message: `Echo: ${message}. This is a mock AI response.` };
-
-  return NextResponse.json(mockResponse);
 }
