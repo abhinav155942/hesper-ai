@@ -4,6 +4,7 @@ import * as React from "react";
 import { useState, useRef, useEffect } from "react";
 import { Send, Mic, RotateCcw, Copy, ThumbsUp, ThumbsDown, Zap, Brain, ChevronDown } from 'lucide-react';
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
 const N8N_WEBHOOK_URL = "/api/hesper/chat";
 
@@ -62,6 +63,7 @@ export default function ChatInterface({ selectedModel, onBack, initialMessage }:
   const inputRef = useRef<HTMLInputElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const prevCountRef = useRef(0);
+  const router = useRouter();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -203,6 +205,46 @@ export default function ChatInterface({ selectedModel, onBack, initialMessage }:
       setIsLoading(false);
       setIsTyping(false);
     }
+  };
+
+  const sendMessage = async (message: string) => {
+    if (!message.trim()) return;
+
+    addMessage("user", message);
+    setIsLoading(true);
+
+    try {
+      const res = await fetch("/api/hesper/chat", {
+        method: "POST",
+        body: message
+      });
+
+      if (!res.ok) {
+        const { error } = await res.json();
+        toast.error(error || "Failed to send message");
+        if (error.includes("Insufficient credits")) {
+          router.push("/subscribe");
+        }
+        return;
+      }
+
+      const { response } = await res.json();
+      addMessage("assistant", response);
+    } catch (error) {
+      toast.error("Connection error");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const addMessage = (type: 'user' | 'assistant', content: string) => {
+    const message: Message = {
+      id: `${type}-${Date.now()}`,
+      type,
+      content,
+      timestamp: new Date()
+    };
+    setMessages((prev) => [...prev, message]);
   };
 
   const generateModelResponse = (userInput: string, model: string): string => {
