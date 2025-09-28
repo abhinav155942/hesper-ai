@@ -43,6 +43,16 @@ export default function SubscriptionsPage() {
   const [orderId, setOrderId] = useState<string | null>(null);
   const paypalClientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID as string | undefined;
 
+  // Log PayPal environment hints at runtime (non-sensitive)
+  useEffect(() => {
+    if (paypalClientId) {
+      // Log only a short prefix to avoid exposing the full key
+      console.log("[PayPal] Client ID prefix:", paypalClientId.slice(0, 10));
+    } else {
+      console.warn("[PayPal] NEXT_PUBLIC_PAYPAL_CLIENT_ID is missing at runtime");
+    }
+  }, [paypalClientId]);
+
   useEffect(() => {
     if (!sessionLoading) {
       fetchSubscription();
@@ -89,6 +99,7 @@ export default function SubscriptionsPage() {
       const { orderID } = await res.json();
       if (!orderID) throw new Error("Order ID missing from response");
       setOrderId(orderID);
+      console.log("[PayPal] Created order:", orderID);
       return orderID as string;
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Order creation failed");
@@ -112,6 +123,7 @@ export default function SubscriptionsPage() {
         },
         body: JSON.stringify({ orderID: data.orderID })
       });
+      console.log("[PayPal] Approved order:", data?.orderID);
       if (!res.ok) {
         const err = await res.json();
         throw new Error(err.error || "Payment failed");
@@ -200,6 +212,10 @@ export default function SubscriptionsPage() {
                         <PayPalButtons
                           createOrder={() => createOrder(plan.apiPath)}
                           onApprove={(data) => onApprove(data, plan.apiPath)}
+                          onError={(err) => {
+                            console.error("[PayPal] Buttons error:", err, { orderId });
+                            toast.error("PayPal error. Please check console for details.");
+                          }}
                           style={{ layout: "horizontal" }}
                         />
                       )}
