@@ -91,35 +91,36 @@ export default function MainContent({
 
   if (internalChatMode) {
     return (
-      <ChatInterface 
-        selectedModel={selectedModel}
-        onBack={handleBackToHome}
-        initialMessage={inputValue}
-        key={chatKey}
-      />
+      <div className="w-full h-full flex flex-col">
+        <ChatInterface 
+          selectedModel={selectedModel} 
+          onBack={() => setChatMode(false)} 
+          initialMessage={inputValue} 
+        />
+      </div>
     );
   }
 
   return (
-    <div className="flex flex-col items-center justify-center p-8">
+    <div className="flex-1 flex items-center justify-center px-4">
       <div className="w-full max-w-[900px] flex flex-col items-center justify-center">
         
-        <div className="text-center mb-10 w-full">
-          <h1 className="font-['Google_Sans'] font-normal text-5xl sm:text-[56px] leading-[1.15] text-foreground/80">
+        <div className="text-center mb-6 sm:mb-10 w-full">
+          <h1 className="font-['Google_Sans'] font-normal text-4xl sm:text-5xl md:text-[56px] leading-[1.15] text-foreground/80">
             Meet <span className="bg-gradient-to-r from-[#5f3dc4] via-[#ff6b6b] to-[#4ecdc4] bg-clip-text text-transparent">Hesper,</span>
           </h1>
-          <h2 className="font-['Google_Sans'] font-normal text-5xl sm:text-[56px] leading-[1.15] text-foreground/80 mt-1">
+          <h2 className="font-['Google_Sans'] font-normal text-4xl sm:text-5xl md:text-[56px] leading-[1.15] text-foreground/80 mt-1">
             your <span className="bg-gradient-to-r from-[#5f3dc4] via-[#ff6b6b] to-[#4ecdc4] bg-clip-text text-transparent">personal AI assistant</span>
           </h2>
         </div>
 
         {/* Action Buttons */}
-        <div className="flex flex-wrap gap-3 justify-center mb-8 w-full max-w-[768px]">
+        <div className="flex flex-col sm:flex-row flex-wrap gap-3 justify-center mb-6 sm:mb-8 w-full max-w-[768px]">
           {actionButtons.map((action, index) => (
             <button
               key={index}
               onClick={() => handleActionButtonClick(action)}
-              className="px-4 py-2 bg-secondary rounded-full text-sm text-secondary-foreground hover:bg-accent transition-colors cursor-pointer"
+              className="px-4 py-2 bg-secondary rounded-full text-sm text-secondary-foreground hover:bg-accent transition-colors cursor-pointer w-full sm:w-auto"
             >
               {action}
             </button>
@@ -128,13 +129,13 @@ export default function MainContent({
 
         <div className="w-full max-w-[768px] mb-4">
           <form onSubmit={handleInputSubmit}>
-            <div className="relative flex items-center w-full bg-secondary rounded-full py-1 pl-6 pr-2 shadow-sm focus-within:ring-1 focus-within:ring-blue-300">
+            <div className="relative flex items-center w-full bg-secondary rounded-full py-1 pl-4 sm:pl-6 pr-2 shadow-sm focus-within:ring-1 focus-within:ring-blue-300">
               <input
                 type="text"
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 placeholder="Ask Hesper"
-                className="flex-grow bg-transparent text-base md:text-lg text-foreground placeholder-muted-foreground outline-none border-none py-3"
+                className="flex-grow bg-transparent text-base md:text-lg text-foreground placeholder-muted-foreground outline-none border-none py-3 px-2 sm:px-4"
               />
 
               <button 

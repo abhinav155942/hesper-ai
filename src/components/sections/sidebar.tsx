@@ -102,7 +102,10 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen, isMobile, onNewCh
           {navigationLinks.map((link, index) => (
             <Tooltip key={index}>
               <TooltipTrigger asChild>
-                <Link href={link.href}>
+                <Link 
+                  href={link.href}
+                  onClick={() => isMobile && setSidebarOpen(false)}
+                >
                   <Button
                     variant="ghost"
                     className={`flex h-12 items-center text-sidebar-foreground transition-all duration-300 hover:bg-sidebar-accent ${

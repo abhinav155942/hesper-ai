@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { ChevronDown, Zap, Brain, Crown } from "lucide-react";
+import { ChevronDown, Zap, Brain, Crown, Menu } from "lucide-react";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
@@ -124,6 +124,15 @@ const Header = ({ onMenuClick, selectedModel, onModelChange }: HeaderProps) => {
   return (
     <header className="flex h-16 w-full items-center justify-between border-b border-border bg-background px-4 md:px-6 font-sans">
       <div className="flex items-center gap-2">
+        {onMenuClick && (
+          <button
+            onClick={onMenuClick}
+            className="md:hidden p-2 rounded-lg hover:bg-muted transition-colors"
+            aria-label="Menu"
+          >
+            <Menu className="h-5 w-5 text-foreground" />
+          </button>
+        )}
         <span 
           className="text-[22px] font-medium bg-gradient-to-r from-purple-600 via-pink-500 to-teal-500 bg-clip-text text-transparent"
         >
