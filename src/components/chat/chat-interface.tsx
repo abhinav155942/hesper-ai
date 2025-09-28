@@ -270,6 +270,43 @@ I'm here to help with a wide range of tasks including answering questions, helpi
 
   const modelInfo = getModelInfo();
 
+  // Thinking JSON panel shown while composing a reply
+  const ThinkingStream: React.FC = () => {
+    const presetsRef = useRef(
+      [
+        { phase: "prepare", intent: "understand_request", tokens: 128, checksum: "c1a9f7", messagePreview: "parsing input" },
+        { phase: "plan", steps: ["extract_entities", "search_context", "draft_outline"], confidence: 0.84 },
+        { phase: "compose", strategy: { tone: "clear", length: "concise" }, citationsFound: 2 },
+        { phase: "verify", guards: ["safety", "factuality"], latencyMs: 142 },
+        { phase: "refine", adjustments: ["simplify_jargon", "add_example"], score: { clarity: 0.91 } },
+        { phase: "finalize", quality: { coherence: 0.93, relevance: 0.9 }, delivered: true }
+      ] as const
+    );
+
+    const [subset] = useState(() => {
+      const arr = [...presetsRef.current];
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      const count = 2 + Math.floor(Math.random() * 2); // 2-3 items
+      return arr.slice(0, count);
+    });
+
+    return (
+      <div className="flex flex-col sm:flex-row gap-2 mt-1">
+        {subset.map((obj, idx) => (
+          <pre
+            key={idx}
+            className="max-w-[260px] whitespace-pre-wrap break-words text-[10px] sm:text-xs leading-tight bg-secondary text-muted-foreground border border-border rounded-md p-2 font-mono animate-pulse"
+          >
+            {JSON.stringify(obj, null, 2)}
+          </pre>
+        ))}
+      </div>
+    );
+  };
+
   // Typing timer that counts up indefinitely while visible
   const TypingTimer: React.FC = () => {
     const [elapsed, setElapsed] = useState(0);
@@ -341,8 +378,9 @@ I'm here to help with a wide range of tasks including answering questions, helpi
           }
             <div>
               {message.isTyping ?
-            <div className="flex items-center gap-1" role="status" aria-live="polite">
+            <div className="flex flex-col gap-1" role="status" aria-live="polite">
                   <TypingTimer />
+                  <ThinkingStream />
                 </div> :
 
             <div className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">
