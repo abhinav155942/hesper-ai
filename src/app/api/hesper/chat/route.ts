@@ -1,24 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
 
 const N8N_WEBHOOK_URL = "https://abhinavt333.app.n8n.cloud/webhook/f36d4e7e-9b5a-4834-adb7-cf088808c191/chat";
 
 export async function POST(request: NextRequest) {
-  const session = await auth();
+  const h = headers();
+  const session = await auth.api.getSession({ headers: h });
   if (!session?.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const userId = session.user.id;
+  const token = h.get("authorization")?.replace("Bearer ", "");
 
   // Parse JSON body
   let message: string;
   let model: string;
+  let history: any[] = [];
   try {
     const body = await request.json();
     message = body.message;
     model = body.model || 'default';
-    const history = body.history || [];
+    history = body.history || [];
   } catch (e) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
@@ -27,9 +31,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "No message provided" }, { status: 400 });
   }
 
+  if (!token) {
+    return NextResponse.json({ error: "No auth token provided" }, { status: 401 });
+  }
+
   // Check credits before processing
   const creditsRes = await fetch(`${process.env.NEXTAUTH_URL || "http://localhost:3000"}/api/user/credits`, {
-    headers: { Authorization: `Bearer ${await session.token}` }
+    headers: { Authorization: `Bearer ${token}` }
   });
   if (!creditsRes.ok) {
     return NextResponse.json({ error: "Failed to check credits" }, { status: 500 });
@@ -61,7 +69,7 @@ export async function POST(request: NextRequest) {
       method: "POST",
       headers: { 
         "Content-Type": "application/json",
-        Authorization: `Bearer ${await session.token}`
+        Authorization: `Bearer ${token}`
       },
       body: JSON.stringify({ amount: 1 })
     });
