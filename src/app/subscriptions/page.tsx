@@ -41,6 +41,7 @@ export default function SubscriptionsPage() {
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [loading, setLoading] = useState(true);
   const [orderId, setOrderId] = useState<string | null>(null);
+  const paypalClientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID as string | undefined;
 
   useEffect(() => {
     if (!sessionLoading) {
@@ -72,7 +73,7 @@ export default function SubscriptionsPage() {
       if (!token) {
         toast.error("Please sign in to subscribe");
         router.push("/sign-in?redirect=/subscriptions");
-        return null;
+        throw new Error("Not authenticated");
       }
       const res = await fetch(`/api/subscribe/${planApiPath}`, {
         method: "POST",
@@ -82,15 +83,16 @@ export default function SubscriptionsPage() {
         }
       });
       if (!res.ok) {
-        const err = await res.json();
+        const err = await res.json().catch(() => ({}));
         throw new Error(err.error || "Failed to create order");
       }
       const { orderID } = await res.json();
+      if (!orderID) throw new Error("Order ID missing from response");
       setOrderId(orderID);
-      return orderID;
+      return orderID as string;
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Order creation failed");
-      return null;
+      throw err instanceof Error ? err : new Error("Order creation failed");
     }
   };
 
@@ -134,6 +136,8 @@ export default function SubscriptionsPage() {
   const currentPlan = subscription?.plan || "free";
   const isExpired = subscription?.expiry && new Date(subscription.expiry) < new Date();
 
+  const showPayPal = !!session?.user && !!paypalClientId;
+
   return (
     <div className="container py-10">
       <div className="max-w-4xl mx-auto space-y-8">
@@ -148,61 +152,120 @@ export default function SubscriptionsPage() {
           )}
         </div>
 
-        <div className="grid md:grid-cols-2 gap-6">
-          {plans.map((plan) => {
-            const isCurrent = currentPlan === plan.id && !isExpired;
-            return (
-              <Card key={plan.id} className="relative">
-                {isCurrent && (
-                  <div className="absolute top-4 right-4">
-                    <Badge variant="secondary">Current Plan</Badge>
-                  </div>
-                )}
-                <CardHeader>
-                  <CardTitle className="text-2xl">{plan.name}</CardTitle>
-                  <CardDescription>{plan.description}</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="text-center">
-                    <div className="text-4xl font-bold">{plan.price}</div>
-                    <p className="text-muted-foreground">per month</p>
-                  </div>
-                  <ul className="space-y-2 text-sm">
-                    <li className="flex items-center gap-2">
-                      <span>•</span> {plan.credits}
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <span>•</span> {plan.id === "basic" ? "Basic model access" : "Advanced model access"}
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <span>•</span> Monthly renewal
-                    </li>
-                  </ul>
-                  {isCurrent ? (
-                    <Button variant="outline" className="w-full" disabled>
-                      Current Plan
-                    </Button>
-                  ) : (
-                    <PayPalScriptProvider
-                      options={{
-                        "client-id": process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID as string,
-                        currency: "USD",
-                        components: "buttons",
-                        intent: "capture",
-                      }}
-                    >
-                      <PayPalButtons
-                        createOrder={() => createOrder(plan.apiPath)}
-                        onApprove={(data) => onApprove(data, plan.apiPath)}
-                        style={{ layout: "horizontal" }}
-                      />
-                    </PayPalScriptProvider>
+        {showPayPal ? (
+          <PayPalScriptProvider
+            key={paypalClientId}
+            options={{
+              "client-id": paypalClientId!,
+              currency: "USD",
+              components: "buttons",
+              intent: "capture",
+            }}
+          >
+            <div className="grid md:grid-cols-2 gap-6">
+              {plans.map((plan) => {
+                const isCurrent = currentPlan === plan.id && !isExpired;
+                return (
+                  <Card key={plan.id} className="relative">
+                    {isCurrent && (
+                      <div className="absolute top-4 right-4">
+                        <Badge variant="secondary">Current Plan</Badge>
+                      </div>
+                    )}
+                    <CardHeader>
+                      <CardTitle className="text-2xl">{plan.name}</CardTitle>
+                      <CardDescription>{plan.description}</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="text-center">
+                        <div className="text-4xl font-bold">{plan.price}</div>
+                        <p className="text-muted-foreground">per month</p>
+                      </div>
+                      <ul className="space-y-2 text-sm">
+                        <li className="flex items-center gap-2">
+                          <span>•</span> {plan.credits}
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <span>•</span> {plan.id === "basic" ? "Basic model access" : "Advanced model access"}
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <span>•</span> Monthly renewal
+                        </li>
+                      </ul>
+                      {isCurrent ? (
+                        <Button variant="outline" className="w-full" disabled>
+                          Current Plan
+                        </Button>
+                      ) : (
+                        <PayPalButtons
+                          createOrder={() => createOrder(plan.apiPath)}
+                          onApprove={(data) => onApprove(data, plan.apiPath)}
+                          style={{ layout: "horizontal" }}
+                        />
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          </PayPalScriptProvider>
+        ) : (
+          <div className="grid md:grid-cols-2 gap-6">
+            {plans.map((plan) => {
+              const isCurrent = currentPlan === plan.id && !isExpired;
+              return (
+                <Card key={plan.id} className="relative">
+                  {isCurrent && (
+                    <div className="absolute top-4 right-4">
+                      <Badge variant="secondary">Current Plan</Badge>
+                    </div>
                   )}
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
+                  <CardHeader>
+                    <CardTitle className="text-2xl">{plan.name}</CardTitle>
+                    <CardDescription>{plan.description}</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="text-center">
+                      <div className="text-4xl font-bold">{plan.price}</div>
+                      <p className="text-muted-foreground">per month</p>
+                    </div>
+                    <ul className="space-y-2 text-sm">
+                      <li className="flex items-center gap-2">
+                        <span>•</span> {plan.credits}
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <span>•</span> {plan.id === "basic" ? "Basic model access" : "Advanced model access"}
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <span>•</span> Monthly renewal
+                      </li>
+                    </ul>
+                    {isCurrent ? (
+                      <Button variant="outline" className="w-full" disabled>
+                        Current Plan
+                      </Button>
+                    ) : !session?.user ? (
+                      <Button
+                        className="w-full"
+                        onClick={() => router.push("/sign-in?redirect=/subscriptions")}
+                      >
+                        Sign in to subscribe
+                      </Button>
+                    ) : (
+                      <Button
+                        className="w-full"
+                        variant="secondary"
+                        onClick={() => toast.error("Payments are temporarily unavailable. Missing PayPal client ID.")}
+                      >
+                        PayPal unavailable
+                      </Button>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        )}
 
         <div className="text-center text-sm text-muted-foreground">
           <p>Already subscribed?{" "}
