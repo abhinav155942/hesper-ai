@@ -182,6 +182,12 @@ const Header = ({ onMenuClick, selectedModel, onModelChange }: HeaderProps) => {
 
       <div className="flex items-center gap-3 md:gap-6">
         <Link
+          href="/subscriptions"
+          className="text-sm text-muted-foreground hover:text-primary transition-colors"
+        >
+          <span className="hidden sm:inline">Subscriptions</span>
+        </Link>
+        <Link
           href="/checkout"
           className="text-sm text-muted-foreground hover:text-primary transition-colors"
         >

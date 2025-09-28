@@ -12,6 +12,8 @@ export const user = sqliteTable("user", {
     .notNull(),
   image: text("image"),
   credits: integer("credits").default(0).notNull(),
+  subscriptionPlan: text("subscription_plan").default('free').notNull(),
+  subscriptionExpiry: integer("subscription_expiry", { mode: "timestamp" }),
   createdAt: integer("created_at", { mode: "timestamp" })
     .$defaultFn(() => new Date())
     .notNull(),

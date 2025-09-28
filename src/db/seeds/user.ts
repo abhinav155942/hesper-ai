@@ -2,22 +2,24 @@ import { db } from '@/db';
 import { user } from '@/db/schema';
 
 async function main() {
-    const testUser = [
+    const sampleUsers = [
         {
-            id: 'test-user-123',
-            name: 'Test User',
-            email: 'test@example.com',
-            emailVerified: false,
+            id: 'pro-test-user-456',
+            name: 'Pro Test User',
+            email: 'prouser@example.com',
+            emailVerified: true,
             image: null,
-            credits: 20,
+            credits: 999999,
+            subscriptionPlan: 'pro',
+            subscriptionExpiry: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
             createdAt: new Date(),
             updatedAt: new Date(),
         }
     ];
 
-    await db.insert(user).values(testUser);
+    await db.insert(user).values(sampleUsers);
     
-    console.log('✅ Test user seeder completed successfully');
+    console.log('✅ Pro test user seeder completed successfully');
 }
 
 main().catch((error) => {
