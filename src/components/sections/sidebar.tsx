@@ -21,7 +21,7 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ sidebarOpen, setSidebarOpen, isMobile, onNewChat }: SidebarProps) {
-  let sidebarClasses = "bg-card p-2 transition-all duration-300 ease-in-out";
+  let sidebarClasses = "bg-card p-2 transition-all duration-300 ease-in-out overflow-y-auto";
   const hClasses = isMobile ? "h-screen" : "h-full";
   const wClasses = sidebarOpen ? (isMobile ? "w-full" : "w-[280px]") : "w-[72px]";
   
