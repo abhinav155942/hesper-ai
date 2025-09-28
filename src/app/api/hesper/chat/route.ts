@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
     const n8nRes = await fetch(N8N_WEBHOOK_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify([message])
+      body: JSON.stringify({ message })
     });
 
     if (!n8nRes.ok) {
