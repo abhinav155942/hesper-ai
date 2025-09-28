@@ -13,7 +13,7 @@ async function fetchN8nReply(message: string, model: string): Promise<string> {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ 
-        message: JSON.stringify(message),  // Nested as JSON string
+        message,
         model 
       }),
     });
