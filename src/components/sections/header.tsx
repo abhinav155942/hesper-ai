@@ -14,12 +14,23 @@ import {
 
 interface HeaderProps {
   onMenuClick?: () => void;
+  selectedModel: 'hesper-1.0v' | 'hesper-pro';
+  onModelChange: (model: 'hesper-1.0v' | 'hesper-pro') => void;
 }
 
-const Header = ({ onMenuClick }: HeaderProps) => {
-  const [selectedModel, setSelectedModel] = React.useState("Hesper 1.0v");
+const Header = ({ onMenuClick, selectedModel, onModelChange }: HeaderProps) => {
+  const [selectedModelDisplay, setSelectedModelDisplay] = React.useState("Hesper 1.0v");
   const [credits, setCredits] = useState(0);
   const [isSubscribed, setIsSubscribed] = useState(false);
+
+  // Update display name when selectedModel changes
+  useEffect(() => {
+    if (selectedModel === 'hesper-1.0v') {
+      setSelectedModelDisplay("Hesper 1.0v");
+    } else {
+      setSelectedModelDisplay("Hesper Pro");
+    }
+  }, [selectedModel]);
 
   useEffect(() => {
     fetchCredits();
@@ -71,7 +82,7 @@ const Header = ({ onMenuClick }: HeaderProps) => {
 
   const models = [
     {
-      id: "hesper-1.0v",
+      id: "hesper-1.0v" as const,
       name: "Hesper 1.0v",
       icon: Zap,
       description: "Fast responses, general AI assistance",
@@ -79,8 +90,8 @@ const Header = ({ onMenuClick }: HeaderProps) => {
       badge: "Free"
     },
     {
-      id: "hesper-pro",
-      name: "Hesper Pro",
+      id: "hesper-pro" as const,
+      name: "Hesper Pro", 
       icon: Brain,
       description: "Advanced reasoning & research capabilities",
       limits: getModelLimits("hesper-pro"),
@@ -88,7 +99,7 @@ const Header = ({ onMenuClick }: HeaderProps) => {
     }
   ];
 
-  const currentModel = models.find(m => m.name === selectedModel) || models[0];
+  const currentModel = models.find(m => m.id === selectedModel) || models[0];
   const CurrentIcon = currentModel.icon;
 
   return (
@@ -104,7 +115,7 @@ const Header = ({ onMenuClick }: HeaderProps) => {
           <DropdownMenuTrigger asChild>
             <button className="flex items-center gap-2 rounded-md px-3 py-2 border border-border bg-background text-sm font-normal text-foreground transition-colors hover:bg-secondary focus:outline-none focus:ring-2 focus:ring-ring min-w-[140px] md:min-w-[160px]">
               <CurrentIcon className="h-4 w-4 shrink-0" />
-              <span className="hidden sm:inline truncate">{selectedModel}</span>
+              <span className="hidden sm:inline truncate">{selectedModelDisplay}</span>
               <span className="sm:hidden truncate">{currentModel.name.split(' ')[1]}</span>
               <ChevronDown className="h-4 w-4 shrink-0 opacity-50 ml-auto" />
             </button>
@@ -112,12 +123,12 @@ const Header = ({ onMenuClick }: HeaderProps) => {
           <DropdownMenuContent align="start" className="w-[280px] md:w-[320px] p-2">
             {models.map((model) => {
               const Icon = model.icon;
-              const isSelected = selectedModel === model.name;
+              const isSelected = selectedModel === model.id;
               
               return (
                 <DropdownMenuItem
                   key={model.id}
-                  onClick={() => setSelectedModel(model.name)}
+                  onClick={() => onModelChange(model.id)}
                   className={`flex flex-col items-start gap-2 p-3 cursor-pointer rounded-md transition-colors ${
                     isSelected ? 'bg-primary/10 border border-primary/20' : 'hover:bg-secondary'
                   }`}
@@ -170,12 +181,12 @@ const Header = ({ onMenuClick }: HeaderProps) => {
       </div>
 
       <div className="flex items-center gap-3 md:gap-6">
-        <div className="text-sm text-muted-foreground flex items-center gap-2">
-          <span className="hidden sm:inline">Credits:</span>
-          <span className="sm:hidden">💳</span>
-          {credits}
-          <span className="hidden sm:inline">💳</span>
-        </div>
+        <Link
+          href="/checkout"
+          className="text-sm text-muted-foreground hover:text-primary transition-colors"
+        >
+          <span className="hidden sm:inline">Credits:</span> {credits}
+        </Link>
 
         <Link
           href="/sign-in"
