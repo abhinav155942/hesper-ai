@@ -24,6 +24,7 @@ const Header = ({ onMenuClick, selectedModel, onModelChange }: HeaderProps) => {
   const [credits, setCredits] = useState(0);
   const [isSubscribed, setIsSubscribed] = useState(false);
   const { data: session, isPending, refetch } = useSession();
+  const [usageOpen, setUsageOpen] = useState(false);
 
   // Update display name when selectedModel changes
   useEffect(() => {
@@ -81,6 +82,12 @@ const Header = ({ onMenuClick, selectedModel, onModelChange }: HeaderProps) => {
     }
     return "";
   };
+
+  // Numeric limits for remaining calculation
+  const limitPro = isSubscribed ? 50 : 3;
+  const limitV1 = isSubscribed ? 100 : 30;
+  const remainingPro = Math.max(0, Math.min(credits, limitPro));
+  const remainingV1 = Math.max(0, Math.min(credits, limitV1));
 
   const models = [
     {
@@ -205,6 +212,26 @@ const Header = ({ onMenuClick, selectedModel, onModelChange }: HeaderProps) => {
         >
           <span className="hidden sm:inline">Credits:</span> {credits}
         </Link>
+
+        {/* View messages info button and popover */}
+        <div className="relative">
+          <button
+            className="inline-flex h-9 items-center justify-center rounded-lg border border-border bg-background px-3 text-sm font-medium text-foreground transition-colors hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            onClick={() => setUsageOpen((o) => !o)}
+            onMouseEnter={() => setUsageOpen(true)}
+            onMouseLeave={() => setUsageOpen(false)}
+          >
+            View messages
+          </button>
+          {usageOpen && (
+            <div className="absolute right-0 mt-2 w-[280px] rounded-lg border border-border bg-popover p-3 text-sm shadow-md z-50">
+              <p className="text-muted-foreground mb-1">Usage based on your credits and plan</p>
+              <p className="text-foreground">
+                Hesper Pro = {remainingPro} messages remaining / Hesper 1.0v = {remainingV1} messages remaining.
+              </p>
+            </div>
+          )}
+        </div>
 
         {session?.user ? (
           <DropdownMenu>
