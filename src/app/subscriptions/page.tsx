@@ -44,16 +44,12 @@ export default function SubscriptionsPage() {
 
   useEffect(() => {
     if (!sessionLoading) {
-      if (!session?.user) {
-        router.push("/sign-in?redirect=/subscriptions");
-        return;
-      }
       fetchSubscription();
     }
-  }, [session, sessionLoading, router]);
+  }, [sessionLoading]);
 
   const fetchSubscription = async () => {
-    if (!session?.user) return;
+    if (!session?.user) { setLoading(false); return; }
     try {
       const token = localStorage.getItem("bearer_token");
       const res = await fetch("/api/user/subscription", {
@@ -73,7 +69,11 @@ export default function SubscriptionsPage() {
   const createOrder = async (planApiPath: string) => {
     try {
       const token = localStorage.getItem("bearer_token");
-      if (!token) throw new Error("Authentication required");
+      if (!token) {
+        toast.error("Please sign in to subscribe");
+        router.push("/sign-in?redirect=/subscriptions");
+        return null;
+      }
       const res = await fetch(`/api/subscribe/${planApiPath}`, {
         method: "POST",
         headers: {
@@ -97,7 +97,11 @@ export default function SubscriptionsPage() {
   const onApprove = async (data: any, planApiPath: string) => {
     try {
       const token = localStorage.getItem("bearer_token");
-      if (!token) throw new Error("Authentication required");
+      if (!token) {
+        toast.error("Please sign in to complete subscription");
+        router.push("/sign-in?redirect=/subscriptions");
+        return;
+      }
       const res = await fetch(`/api/subscribe/capture/${planApiPath}`, {
         method: "POST",
         headers: {
@@ -125,10 +129,6 @@ export default function SubscriptionsPage() {
         <Loader2 className="h-8 w-8 animate-spin" />
       </div>
     );
-  }
-
-  if (!session?.user) {
-    return null; // Redirect handled in useEffect
   }
 
   const currentPlan = subscription?.plan || "free";

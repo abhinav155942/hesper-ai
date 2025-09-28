@@ -16,5 +16,9 @@ export async function middleware(request: NextRequest) {
  
 export const config = {
   runtime: "nodejs",
-  matcher: [], // Apply middleware to specific routes
+  // Protect only specific routes; allow public access to pages like / and /subscriptions
+  matcher: [
+    "/checkout",
+    "/success",
+  ],
 };
