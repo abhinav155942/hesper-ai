@@ -12,10 +12,10 @@ async function fetchN8nReply(message: string, model: string): Promise<string> {
     const res = await fetch(N8N_WEBHOOK_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ 
+      body: JSON.stringify({
         message,
-        model 
-      }),
+        model
+      })
     });
 
     if (!res.ok) {
@@ -30,8 +30,8 @@ async function fetchN8nReply(message: string, model: string): Promise<string> {
       try {
         const data = JSON.parse(responseText);
         return (
-          data.output || data.reply || data.message || data.text || data.content || responseText
-        );
+          data.output || data.reply || data.message || data.text || data.content || responseText);
+
       } catch {
         // If parsing fails, return as-is
         return responseText;
@@ -305,8 +305,8 @@ I'm here to help with a wide range of tasks including answering questions, helpi
       <div className="inline-flex items-center gap-2 text-xs text-muted-foreground font-mono animate-pulse" role="status" aria-live="polite">
         <span>runtime:</span>
         <span>{mm}:{ss}</span>
-      </div>
-    );
+      </div>);
+
   };
 
   return (
@@ -362,7 +362,7 @@ I'm here to help with a wide range of tasks including answering questions, helpi
                   <TypingTimer />
                 </div> :
 
-            <div className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">
+            <div className="whitespace-pre-wrap text-sm leading-relaxed !text-black !bg-white !shadow-none !border-double">
                   {message.content}
                 </div>
             }
