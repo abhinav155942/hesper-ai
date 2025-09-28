@@ -1,8 +1,86 @@
 "use client";
 
 import { Zap, Brain, Crown, MessageCircle, Clock, Shield, Sparkles } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 
 export default function AboutHesperPage() {
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [credits, setCredits] = useState<number | null>(null);
+  const [isPaid, setIsPaid] = useState<boolean>(false);
+  const [expiry, setExpiry] = useState<number | null>(null);
+
+  const proDailyLimit = useMemo(() => (isPaid ? 50 : 3), [isPaid]);
+  const v1DailyLimit = useMemo(() => (isPaid ? 100 : 30), [isPaid]);
+
+  const hesperProRemaining = useMemo(() => {
+    if (credits == null) return null;
+    return Math.max(0, Math.min(credits, proDailyLimit));
+  }, [credits, proDailyLimit]);
+
+  const hesperV1Remaining = useMemo(() => {
+    if (credits == null) return null;
+    return Math.max(0, Math.min(credits, v1DailyLimit));
+  }, [credits, v1DailyLimit]);
+
+  const fetchUsage = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const token = typeof window !== "undefined" ? localStorage.getItem("bearer_token") : null;
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+
+      const [subRes, credRes] = await Promise.all([
+        fetch("/api/user/subscription", { headers }),
+        fetch("/api/user/credits", { headers }),
+      ]);
+
+      if (!subRes.ok) {
+        // Treat unauthenticated as free plan
+        if (subRes.status !== 401) {
+          const errText = await subRes.text();
+          console.error("Subscription fetch error:", errText);
+        }
+        setIsPaid(false);
+        setExpiry(null);
+      } else {
+        const sub = await subRes.json();
+        const exp = sub?.subscriptionExpiry ? Number(new Date(sub.subscriptionExpiry).getTime()) : null;
+        const now = Date.now();
+        const active = !!sub?.subscriptionPlan && (!exp || exp > now);
+        setIsPaid(active);
+        setExpiry(exp);
+      }
+
+      if (!credRes.ok) {
+        if (credRes.status === 401) {
+          // unauthenticated: no credits info
+          setCredits(null);
+        } else {
+          const errText = await credRes.text();
+          throw new Error(errText || "Failed to load credits");
+        }
+      } else {
+        const c = await credRes.json();
+        setCredits(typeof c?.credits === "number" ? c.credits : null);
+      }
+    } catch (e: any) {
+      setError(e?.message || "Failed to load usage");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch when opening the popover for the first time
+  useEffect(() => {
+    if (open && credits == null && !loading) {
+      fetchUsage();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
   return (
     <div className="min-h-screen bg-background">
       <div className="container max-w-4xl mx-auto px-6 py-12">
@@ -14,6 +92,62 @@ export default function AboutHesperPage() {
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
             Meet our AI models designed to assist you in different ways. Choose the right model for your needs.
           </p>
+          {/* View usage button */}
+          <div className="mt-4 flex justify-center">
+            <div
+              className="relative"
+              onMouseEnter={() => setOpen(true)}
+              onMouseLeave={() => setOpen(false)}
+            >
+              <button
+                type="button"
+                onClick={() => setOpen((v) => !v)}
+                className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-1.5 text-sm text-foreground hover:bg-secondary focus:outline-none focus:ring-2 focus:ring-ring"
+              >
+                View messages
+              </button>
+              {open && (
+                <div className="absolute left-1/2 z-50 mt-2 w-[260px] -translate-x-1/2 rounded-lg border border-border bg-popover p-3 text-sm shadow-sm">
+                  {loading ? (
+                    <div className="text-muted-foreground">Loading...</div>
+                  ) : error ? (
+                    <div className="text-destructive">{error}</div>
+                  ) : (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">Plan</span>
+                        <span className="font-medium">{isPaid ? "Paid" : "Free"}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">Credits</span>
+                        <span className="font-medium">{credits ?? "—"}</span>
+                      </div>
+                      <div className="h-px bg-border my-2" />
+                      <div className="flex items-center justify-between">
+                        <span>Hesper Pro</span>
+                        <span className="font-medium">
+                          {hesperProRemaining == null ? "—" : `${hesperProRemaining} remaining`}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span>Hesper 1.0v</span>
+                        <span className="font-medium">
+                          {hesperV1Remaining == null ? "—" : `${hesperV1Remaining} remaining`}
+                        </span>
+                      </div>
+                      <div className="h-px bg-border my-2" />
+                      <p className="text-xs">
+                        {`Hesper Pro = ${hesperProRemaining ?? "—"} messages remaining / Hesper 1.0v = ${hesperV1Remaining ?? "—"} messages remaining.`}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Shown as min(credits, daily model limit). Daily limits reset at midnight UTC.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Model Cards */}
