@@ -6,35 +6,22 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const message = body?.message ?? body?.prompt ?? body?.text ?? body?.query ?? "";
-    const model = body?.model ?? body?.modelId ?? "";
 
-    // Send multiple aliases to be compatible with different n8n node mappings
-    const payload = {
-      message,
-      model,
-      prompt: message,
-      query: message,
-      text: message,
-      input: message,
-      // Include original for completeness
-      original: body,
-    };
+    if (!message) {
+      return Response.json({ error: "No message provided" }, { status: 400 });
+    }
 
+    // Send only the raw message as plain text to n8n
     const upstream = await fetch(N8N_WEBHOOK_URL, {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
+        "Content-Type": "text/plain",
       },
-      body: JSON.stringify(payload),
+      body: message, // Raw text, no JSON
     });
 
     const contentType = upstream.headers.get("content-type") || "text/plain";
     const status = upstream.status;
-
-    if (contentType.includes("application/json")) {
-      const data = await upstream.json().catch(() => ({}));
-      return Response.json(data, { status });
-    }
 
     const text = await upstream.text();
     return new Response(text, {
@@ -42,8 +29,8 @@ export async function POST(req: NextRequest) {
       headers: { "Content-Type": contentType },
     });
   } catch (err: any) {
-    return Response.json(
-      { error: "CHAT_PROXY_ERROR", message: err?.message || "Unknown error" },
+    return Response(
+      `Error: ${err?.message || "Unknown error"}`,
       { status: 500 }
     );
   }
