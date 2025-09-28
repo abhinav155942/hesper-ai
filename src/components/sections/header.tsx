@@ -11,6 +11,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useSession, authClient } from "@/lib/auth-client";
 
 interface HeaderProps {
   onMenuClick?: () => void;
@@ -22,6 +23,7 @@ const Header = ({ onMenuClick, selectedModel, onModelChange }: HeaderProps) => {
   const [selectedModelDisplay, setSelectedModelDisplay] = React.useState("Hesper 1.0v");
   const [credits, setCredits] = useState(0);
   const [isSubscribed, setIsSubscribed] = useState(false);
+  const { data: session, isPending, refetch } = useSession();
 
   // Update display name when selectedModel changes
   useEffect(() => {
@@ -35,6 +37,18 @@ const Header = ({ onMenuClick, selectedModel, onModelChange }: HeaderProps) => {
   useEffect(() => {
     fetchCredits();
     checkSubscription();
+  }, []);
+
+  // Trigger unverified users cleanup once per 24h
+  useEffect(() => {
+    const key = "cleanup_unverified_last_run";
+    const last = localStorage.getItem(key);
+    const now = Date.now();
+    if (!last || now - Number(last) > 24 * 60 * 60 * 1000) {
+      fetch("/api/cleanup/unverified", { method: "DELETE" }).finally(() => {
+        localStorage.setItem(key, String(now));
+      });
+    }
   }, []);
 
   const fetchCredits = async () => {
@@ -101,6 +115,16 @@ const Header = ({ onMenuClick, selectedModel, onModelChange }: HeaderProps) => {
 
   const currentModel = models.find(m => m.id === selectedModel) || models[0];
   const CurrentIcon = currentModel.icon;
+
+  const handleSignOut = async () => {
+    const { error } = await authClient.signOut();
+    if (error?.code) {
+      toast.error(error.code);
+      return;
+    }
+    localStorage.removeItem("bearer_token");
+    await refetch();
+  };
 
   return (
     <header className="flex h-16 w-full items-center justify-between border-b border-border bg-background px-4 md:px-6 font-sans">
@@ -194,13 +218,32 @@ const Header = ({ onMenuClick, selectedModel, onModelChange }: HeaderProps) => {
           <span className="hidden sm:inline">Credits:</span> {credits}
         </Link>
 
-        <Link
-          href="/sign-in"
-          className="inline-flex h-9 items-center justify-center rounded-lg bg-primary px-4 md:px-6 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-        >
-          <span className="hidden sm:inline">Sign in</span>
-          <span className="sm:inline md:hidden">Sign in</span>
-        </Link>
+        {session?.user ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="inline-flex h-9 items-center justify-center rounded-lg border border-border bg-background px-3 text-sm font-medium text-foreground transition-colors hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+                <span className="max-w-[140px] truncate">{session.user.name || session.user.email}</span>
+                <ChevronDown className="ml-2 h-4 w-4 opacity-60" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48 p-1">
+              <DropdownMenuItem asChild>
+                <Link href="/settings">Settings</Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleSignOut} className="text-destructive focus:text-destructive">
+                Log out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : (
+          <Link
+            href="/sign-in"
+            className="inline-flex h-9 items-center justify-center rounded-lg bg-primary px-4 md:px-6 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          >
+            <span className="hidden sm:inline">Sign in</span>
+            <span className="sm:inline md:hidden">Sign in</span>
+          </Link>
+        )}
       </div>
     </header>
   );

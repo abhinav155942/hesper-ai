@@ -76,7 +76,11 @@ export default function SubscriptionsPage() {
       });
       if (res.ok) {
         const data = await res.json();
-        setSubscription(data);
+        // Map API response { subscriptionPlan, subscriptionExpiry } -> { plan, expiry }
+        setSubscription({
+          plan: (data.subscriptionPlan ?? data.plan ?? "free") as Subscription["plan"],
+          expiry: data.subscriptionExpiry ?? data.expiry ?? null,
+        });
       }
     } catch (err) {
       toast.error("Failed to load subscription");
