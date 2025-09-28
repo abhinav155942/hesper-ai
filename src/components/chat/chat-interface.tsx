@@ -329,6 +329,39 @@ I'm here to help with a wide range of tasks including answering questions, helpi
     );
   };
 
+  // Collapsible "Thought for Xs" panel containing randomized JSON snippets
+  const ThoughtPanel: React.FC = () => {
+    const [open, setOpen] = useState(true);
+    const [elapsed, setElapsed] = useState(0);
+
+    useEffect(() => {
+      const start = Date.now();
+      const id = setInterval(() => setElapsed(Math.floor((Date.now() - start) / 1000)), 1000);
+      return () => clearInterval(id);
+    }, []);
+
+    return (
+      <div className="rounded-md border border-border bg-card/50" role="status" aria-live="polite">
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          className="w-full flex items-center justify-between px-3 py-2 text-xs text-muted-foreground"
+        >
+          <span className="font-medium">Thought for {elapsed}s</span>
+          <ChevronDown className={`h-4 w-4 transition-transform ${open ? "rotate-180" : ""}`} />
+        </button>
+        {open && (
+          <div className="px-3 pb-3">
+            <ThinkingStream />
+            <div className="mt-2">
+              <TypingTimer />
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="relative flex flex-col min-h-[100dvh] w-full max-w-4xl mx-auto">
       {/* Header */}
@@ -378,10 +411,7 @@ I'm here to help with a wide range of tasks including answering questions, helpi
           }
             <div>
               {message.isTyping ?
-            <div className="flex flex-col gap-1" role="status" aria-live="polite">
-                  <TypingTimer />
-                  <ThinkingStream />
-                </div> :
+            <ThoughtPanel /> :
 
             <div className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">
                   {message.content}
