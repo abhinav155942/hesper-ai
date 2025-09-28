@@ -23,7 +23,7 @@ const plans = [
     price: "$14.99",
     description: "100 credits/month, access to basic model features",
     credits: "100 credits added",
-    apiPath: "basic"
+    apiPath: "basic",
   },
   {
     id: "pro",
@@ -31,8 +31,8 @@ const plans = [
     price: "$29.99",
     description: "Unlimited credits, advanced reasoning & research",
     credits: "Unlimited credits",
-    apiPath: "pro"
-  }
+    apiPath: "pro",
+  },
 ] as const;
 
 export default function SubscriptionsPage() {
@@ -43,6 +43,13 @@ export default function SubscriptionsPage() {
   const [orderId, setOrderId] = useState<string | null>(null);
   const paypalClientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID as string | undefined;
   const effectiveClientId = paypalClientId ?? "test"; // fallback to PayPal sandbox demo client-id so buttons render
+  const basicPlanId = process.env.NEXT_PUBLIC_PAYPAL_BASIC_PLAN_ID as string | undefined;
+  const proPlanId = process.env.NEXT_PUBLIC_PAYPAL_PRO_PLAN_ID as string | undefined;
+  const planIdMap: Record<string, string | undefined> = {
+    basic: basicPlanId,
+    pro: proPlanId,
+  };
+  const subscriptionsEnabled = !!(basicPlanId || proPlanId);
 
   // Log PayPal environment hints at runtime (non-sensitive)
   useEffect(() => {
@@ -120,9 +127,9 @@ export default function SubscriptionsPage() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
+          Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ orderID: data.orderID })
+        body: JSON.stringify({ orderID: data.orderID }),
       });
       console.log("[PayPal] Approved order:", data?.orderID);
       if (!res.ok) {
@@ -135,6 +142,35 @@ export default function SubscriptionsPage() {
       router.push("/"); // Back to home
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Payment capture failed");
+    }
+  };
+
+  const onApproveSubscription = async (data: any, planApiPath: string) => {
+    try {
+      const token = localStorage.getItem("bearer_token");
+      if (!token) {
+        toast.error("Please sign in to complete subscription");
+        router.push("/sign-in?redirect=/subscriptions");
+        return;
+      }
+      console.log("[PayPal] Approved subscription:", data?.subscriptionID);
+      const res = await fetch(`/api/subscribe/activate/${planApiPath}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ subscriptionID: data.subscriptionID }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error((err as any).error || "Failed to activate subscription");
+      }
+      toast.success("Subscription activated! Redirecting...");
+      await fetchSubscription();
+      router.push("/");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Subscription activation failed");
     }
   };
 
@@ -172,17 +208,19 @@ export default function SubscriptionsPage() {
 
         {showPayPal ? (
           <PayPalScriptProvider
-            key={effectiveClientId}
+            key={`${effectiveClientId}-${subscriptionsEnabled ? "sub" : "order"}`}
             options={{
               "client-id": effectiveClientId!,
               currency: "USD",
               components: "buttons",
-              intent: "capture",
+              intent: subscriptionsEnabled ? ("subscription" as const) : ("capture" as const),
+              vault: subscriptionsEnabled ? true : undefined,
             }}
           >
             <div className="grid md:grid-cols-2 gap-6">
               {plans.map((plan) => {
                 const isCurrent = currentPlan === plan.id && !isExpired;
+                const planId = planIdMap[plan.id];
                 return (
                   <Card key={plan.id} className="relative">
                     {isCurrent && (
@@ -214,6 +252,18 @@ export default function SubscriptionsPage() {
                         <Button variant="outline" className="w-full" disabled>
                           Current Plan
                         </Button>
+                      ) : subscriptionsEnabled && planId ? (
+                        <PayPalButtons
+                          createSubscription={(data, actions) => {
+                            return actions.subscription!.create({ plan_id: planId });
+                          }}
+                          onApprove={(data) => onApproveSubscription(data, plan.apiPath)}
+                          onError={(err) => {
+                            console.error("[PayPal] Subscription error:", err);
+                            toast.error("PayPal subscription error. See console for details.");
+                          }}
+                          style={{ layout: "horizontal" }}
+                        />
                       ) : (
                         <PayPalButtons
                           createOrder={() => createOrder(plan.apiPath)}
