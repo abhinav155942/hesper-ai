@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import { Menu, Plus, Settings, Info, Smartphone, CreditCard, Building } from "lucide-react";
 import Link from "next/link";
 
@@ -16,9 +17,10 @@ interface SidebarProps {
   sidebarOpen: boolean;
   setSidebarOpen: (open: boolean) => void;
   isMobile: boolean;
+  onNewChat?: () => void;
 }
 
-export default function Sidebar({ sidebarOpen, setSidebarOpen, isMobile }: SidebarProps) {
+export default function Sidebar({ sidebarOpen, setSidebarOpen, isMobile, onNewChat }: SidebarProps) {
   let sidebarClasses = "bg-sidebar-background p-2 transition-all duration-300 ease-in-out";
   const hClasses = isMobile ? "h-screen" : "h-full";
   const wClasses = sidebarOpen ? (isMobile ? "w-full" : "w-[280px]") : "w-[72px]";
@@ -37,7 +39,7 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen, isMobile }: Sideb
   }
 
   const navigationLinks = [
-    { icon: Info, label: "About Hesper", href: "#" },
+    { icon: Info, label: "About Hesper", href: "/about-hesper" },
     { icon: Smartphone, label: "Hesper App", href: "#" },
     { icon: CreditCard, label: "Subscriptions", href: "#" },
     { icon: Building, label: "For Business", href: "#" },
@@ -80,7 +82,7 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen, isMobile }: Sideb
                     ? "w-auto px-4"
                     : "w-14 justify-center px-0"
                 }`}
-                onClick={() => setSidebarOpen(!sidebarOpen)}
+                onClick={onNewChat}
               >
                 <Plus className="h-6 w-6" />
                 {sidebarOpen && (
