@@ -1,0 +1,1 @@
+ALTER TABLE `business_intro` ADD `business_intro` text;

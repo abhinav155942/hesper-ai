@@ -93,6 +93,7 @@ export const emailFormatSettings = sqliteTable('email_format_settings', {
   emailDescription: text('email_description'),
   emailSignature: text('email_signature'),
   subjectTemplates: text('subject_templates'),
+  emailFormat: text('email_format'),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
 }, (table) => ({
@@ -104,6 +105,7 @@ export const businessIntro = sqliteTable('business_intro', {
   userId: integer('user_id').notNull(),
   userName: text('user_name'),
   businessDescription: text('business_description'),
+  businessIntro: text('business_intro'),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
 }, (table) => ({

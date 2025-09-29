@@ -21,13 +21,14 @@ export async function PATCH(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Extract allowed fields from request body
-    const allowedFields = ['email_tone', 'email_description', 'email_signature', 'subject_templates'];
+    // Extract allowed fields from request body (including new email_format field)
+    const allowedFields = ['email_tone', 'email_description', 'email_signature', 'subject_templates', 'email_format'];
     const updateData: Partial<{
       emailTone: string;
       emailDescription: string;
       emailSignature: string;
       subjectTemplates: string;
+      emailFormat: string;
     }> = {};
 
     // Map request fields to database column names
@@ -35,7 +36,8 @@ export async function PATCH(request: NextRequest) {
       email_tone: 'emailTone',
       email_description: 'emailDescription',
       email_signature: 'emailSignature',
-      subject_templates: 'subjectTemplates'
+      subject_templates: 'subjectTemplates',
+      email_format: 'emailFormat'
     };
 
     // Track which fields are being updated for webhook notifications

@@ -19,15 +19,7 @@ export async function GET(request: NextRequest) {
       }, { status: 401 });
     }
 
-    // Ensure user.id is a number
-    const userId = Number(user.id);
-    if (isNaN(userId)) {
-      return NextResponse.json({ 
-        error: 'Invalid user ID' 
-      }, { status: 400 });
-    }
-
-    // Query all settings tables concurrently for the authenticated user
+    // Query all settings tables concurrently for the authenticated user - use user.id as string directly
     const [
       smtpResult,
       emailFormatResult,
@@ -35,59 +27,64 @@ export async function GET(request: NextRequest) {
       businessProsResult,
       businessDifferencesResult
     ] = await Promise.all([
-      // SMTP Settings (single record)
+      // SMTP Settings (all records for user with full columns)
       db.select({
+        id: smtpSettings.id,
+        user_id: smtpSettings.userId,
         smtp_username: smtpSettings.smtpUsername,
         smtp_password: smtpSettings.smtpPassword,
         smtp_host: smtpSettings.smtpHost,
         smtp_port: smtpSettings.smtpPort,
         client_hostname: smtpSettings.clientHostname,
-        ssl_tls_enabled: smtpSettings.sslTlsEnabled
+        ssl_tls_enabled: smtpSettings.sslTlsEnabled,
+        created_at: smtpSettings.createdAt,
+        updated_at: smtpSettings.updatedAt
       })
         .from(smtpSettings)
-        .where(eq(smtpSettings.userId, userId))
-        .limit(1),
+        .where(eq(smtpSettings.userId, user.id)),
 
-      // Email Format Settings (single record)
+      // Email Format Settings (single record with new email_format field)
       db.select({
         email_tone: emailFormatSettings.emailTone,
         email_description: emailFormatSettings.emailDescription,
         email_signature: emailFormatSettings.emailSignature,
-        subject_templates: emailFormatSettings.subjectTemplates
+        subject_templates: emailFormatSettings.subjectTemplates,
+        email_format: emailFormatSettings.emailFormat
       })
         .from(emailFormatSettings)
-        .where(eq(emailFormatSettings.userId, userId))
+        .where(eq(emailFormatSettings.userId, parseInt(user.id)))
         .limit(1),
 
-      // Business Intro (single record)
+      // Business Intro (single record with new business_intro field)
       db.select({
         user_name: businessIntro.userName,
-        business_description: businessIntro.businessDescription
+        business_description: businessIntro.businessDescription,
+        business_intro: businessIntro.businessIntro
       })
         .from(businessIntro)
-        .where(eq(businessIntro.userId, userId))
+        .where(eq(businessIntro.userId, parseInt(user.id)))
         .limit(1),
 
-      // Business Pros (multiple records)
+      // Business Pros (multiple records) - use user.id as string directly
       db.select({
         id: businessPros.id,
         value: businessPros.value
       })
         .from(businessPros)
-        .where(eq(businessPros.userId, userId)),
+        .where(eq(businessPros.userId, parseInt(user.id))),
 
-      // Business Differences (multiple records)
+      // Business Differences (multiple records) - use user.id as string directly
       db.select({
         id: businessDifferences.id,
         value: businessDifferences.value
       })
         .from(businessDifferences)
-        .where(eq(businessDifferences.userId, userId))
+        .where(eq(businessDifferences.userId, parseInt(user.id)))
     ]);
 
     // Format response according to requirements
     const response = {
-      smtp: smtpResult.length > 0 ? smtpResult[0] : null,
+      smtp: smtpResult || [], // Return all SMTP settings records
       emailFormat: emailFormatResult.length > 0 ? emailFormatResult[0] : null,
       businessIntro: businessIntroResult.length > 0 ? businessIntroResult[0] : null,
       businessPros: businessProsResult || [],

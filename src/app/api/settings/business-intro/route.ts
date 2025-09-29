@@ -21,10 +21,10 @@ export async function PATCH(request: NextRequest) {
       }, { status: 400 });
     }
 
-    const { user_name, business_description } = requestBody;
+    const { user_name, business_description, business_intro } = requestBody;
 
     // Validate that at least one field is provided
-    if (user_name === undefined && business_description === undefined) {
+    if (user_name === undefined && business_description === undefined && business_intro === undefined) {
       return NextResponse.json({ 
         error: "At least one field must be provided",
         code: "NO_FIELDS_PROVIDED" 
@@ -57,6 +57,10 @@ export async function PATCH(request: NextRequest) {
         insertData.businessDescription = business_description;
         changedFields.business_description = business_description;
       }
+      if (business_intro !== undefined) {
+        insertData.businessIntro = business_intro;
+        changedFields.business_intro = business_intro;
+      }
 
       updatedRecord = await db.insert(businessIntro)
         .values(insertData)
@@ -74,6 +78,10 @@ export async function PATCH(request: NextRequest) {
       if (business_description !== undefined && business_description !== existingRecord[0].businessDescription) {
         updateData.businessDescription = business_description;
         changedFields.business_description = business_description;
+      }
+      if (business_intro !== undefined && business_intro !== existingRecord[0].businessIntro) {
+        updateData.businessIntro = business_intro;
+        changedFields.business_intro = business_intro;
       }
 
       // Only update if there are actual changes

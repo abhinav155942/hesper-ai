@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { getSettingsKeyValueLines } from "@/lib/settings-helpers";
+import { getUserSettingsJson } from "@/lib/settings-helpers";
 
 const N8N_WEBHOOK_URL = "https://abhinavt333.app.n8n.cloud/webhook/f36d4e7e-9b5a-4834-adb7-cf088808c191/chat";
 
@@ -46,24 +47,26 @@ export async function POST(req: NextRequest) {
     }
 
     const exec = (async () => {
-      // Build context: attach all current settings as separate "key: value" lines before the user's message
-      let settingsLines: string[] = [];
+      // Build JSON context from all current settings
+      let settings: any = {};
       try {
         if (user?.id) {
-          settingsLines = await getSettingsKeyValueLines(String(user.id));
+          settings = await getUserSettingsJson(String(user.id));
         }
       } catch {}
 
-      const contextBlock = settingsLines.length > 0 ? settingsLines.join("\n") + "\n\n" : "";
-      const payloadText = `${contextBlock}user_message: ${message}`;
+      const payload = {
+        ...settings,
+        user_message: message
+      };
 
-      // Send as plain text to n8n
+      // Send as JSON to n8n
       const upstream = await fetch(N8N_WEBHOOK_URL, {
         method: "POST",
         headers: {
-          "Content-Type": "text/plain",
+          "Content-Type": "application/json",
         },
-        body: payloadText, // Raw text with settings context + user message
+        body: JSON.stringify(payload),
         // Prevent intermediary caches and proxies from retrying
         cache: "no-store",
       });

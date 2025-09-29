@@ -1,0 +1,1 @@
+ALTER TABLE `email_format_settings` ADD `email_format` text;

@@ -1,0 +1,1 @@
+ALTER TABLE `smtp_settings` ALTER COLUMN "user_id" TO "user_id" integer NOT NULL REFERENCES user(id) ON DELETE no action ON UPDATE no action;
