@@ -75,6 +75,8 @@ export default function ChatInterface({ selectedModel, onBack, initialMessage }:
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const prevCountRef = useRef(0);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const inFlightRef = useRef(false);
+  const sendingRef = useRef(false);
 
   // Parse leads from HTML-ish list blocks produced by the AI
   const parseLeadsFromHtml = (html: string): Array<{ name?: string; email?: string; linkedin?: string }> => {
@@ -246,6 +248,8 @@ export default function ChatInterface({ selectedModel, onBack, initialMessage }:
 
   const handleSend = async (content: string) => {
     if (!content.trim() || isLoading) return;
+    if (sendingRef.current) return; // prevent rapid double-send
+    sendingRef.current = true;
     const currentModelName = selectedModel === 'hesper-pro' ? 'Hesper Pro' : 'Hesper';
 
     const userMessage: Message = {
@@ -293,6 +297,7 @@ export default function ChatInterface({ selectedModel, onBack, initialMessage }:
     } finally {
       setIsLoading(false);
       setIsTyping(false);
+      sendingRef.current = false;
     }
   };
 
@@ -478,7 +483,7 @@ I'm here to help with a wide range of tasks including answering questions, helpi
       </div>
 
       {/* 20-min timeline while waiting */}
-      <WaitTimeline active={isTyping || isLoading} />
+      {/* <WaitTimeline active={isTyping || isLoading} /> */}
 
       {/* Messages Area */}
       <div
