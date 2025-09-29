@@ -19,6 +19,14 @@ export async function GET(request: NextRequest) {
       }, { status: 401 });
     }
 
+    // Ensure user.id is a number
+    const userId = Number(user.id);
+    if (isNaN(userId)) {
+      return NextResponse.json({ 
+        error: 'Invalid user ID' 
+      }, { status: 400 });
+    }
+
     // Query all settings tables concurrently for the authenticated user
     const [
       smtpResult,
@@ -37,7 +45,7 @@ export async function GET(request: NextRequest) {
         ssl_tls_enabled: smtpSettings.sslTlsEnabled
       })
         .from(smtpSettings)
-        .where(eq(smtpSettings.userId, parseInt(user.id)))
+        .where(eq(smtpSettings.userId, userId))
         .limit(1),
 
       // Email Format Settings (single record)
@@ -48,7 +56,7 @@ export async function GET(request: NextRequest) {
         subject_templates: emailFormatSettings.subjectTemplates
       })
         .from(emailFormatSettings)
-        .where(eq(emailFormatSettings.userId, parseInt(user.id)))
+        .where(eq(emailFormatSettings.userId, userId))
         .limit(1),
 
       // Business Intro (single record)
@@ -57,7 +65,7 @@ export async function GET(request: NextRequest) {
         business_description: businessIntro.businessDescription
       })
         .from(businessIntro)
-        .where(eq(businessIntro.userId, parseInt(user.id)))
+        .where(eq(businessIntro.userId, userId))
         .limit(1),
 
       // Business Pros (multiple records)
@@ -66,7 +74,7 @@ export async function GET(request: NextRequest) {
         value: businessPros.value
       })
         .from(businessPros)
-        .where(eq(businessPros.userId, parseInt(user.id))),
+        .where(eq(businessPros.userId, userId)),
 
       // Business Differences (multiple records)
       db.select({
@@ -74,7 +82,7 @@ export async function GET(request: NextRequest) {
         value: businessDifferences.value
       })
         .from(businessDifferences)
-        .where(eq(businessDifferences.userId, parseInt(user.id)))
+        .where(eq(businessDifferences.userId, userId))
     ]);
 
     // Format response according to requirements
