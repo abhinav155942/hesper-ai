@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import Link from "next/link";
-import { authClient, useSession } from "@/lib/auth-client";
+import { useSession, signOut } from "@/lib/auth-client";
 
 export default function SettingsPage() {
   const { data: session, isPending, refetch } = useSession();
@@ -121,7 +121,7 @@ export default function SettingsPage() {
 
   const handleSignOut = async () => {
     setSigningOut(true);
-    const { error } = await authClient.signOut();
+    const { error } = await signOut();
     if (error?.code) {
       toast.error(error.code);
       setSigningOut(false);
