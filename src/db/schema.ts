@@ -73,7 +73,7 @@ export const verification = sqliteTable("verification", {
 // Settings tables
 export const smtpSettings = sqliteTable('smtp_settings', {
   id: integer('id').primaryKey({ autoIncrement: true }),
-  userId: integer('user_id').notNull(),
+  userId: text('user_id').notNull().references(() => user.id),
   smtpUsername: text('smtp_username'),
   smtpPassword: text('smtp_password'),
   smtpHost: text('smtp_host'),
