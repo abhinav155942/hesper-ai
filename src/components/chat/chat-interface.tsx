@@ -2,8 +2,9 @@
 
 import * as React from "react";
 import { useState, useRef, useEffect } from "react";
-import { Send, Mic, RotateCcw, Copy, ThumbsUp, ThumbsDown, Zap, Brain, ChevronDown, ChevronLeft, Upload } from 'lucide-react';
+import { Send, Mic, RotateCcw, Copy, ThumbsUp, ThumbsDown, Zap, Brain, ChevronDown, ChevronLeft, Upload, MoreHorizontal, FileDown, MailCheck } from 'lucide-react';
 import { toast } from "sonner";
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuLabel } from "@/components/ui/dropdown-menu";
 
 const N8N_WEBHOOK_URL = "/api/hesper/chat";
 
@@ -518,31 +519,81 @@ I'm here to help with a wide range of tasks including answering questions, helpi
                   if (leads.length > 0) {
                     return (
                       <div className="space-y-3">
-                        <div className="text-xs text-muted-foreground">Leads found: {leads.length}</div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
-                          {leads.map((lead, i) => (
-                            <div key={i} className="rounded-lg border border-border bg-card p-3">
-                              {lead.name && <div className="font-medium text-sm mb-1">{lead.name}</div>}
-                              <div className="space-y-1 text-sm">
-                                {lead.email && (
-                                  <div className="truncate">
-                                    <span className="text-muted-foreground mr-1">Email:</span>
-                                    <a className="underline" href={`mailto:${lead.email}`}>{lead.email}</a>
-                                  </div>
-                                )}
-                                {lead.linkedin && (
-                                  <div className="truncate">
-                                    <span className="text-muted-foreground mr-1">LinkedIn:</span>
-                                    <a className="underline" href={lead.linkedin} target="_blank" rel="noopener noreferrer">
-                                      {lead.linkedin.replace(/^https?:\/\//, '')}
-                                    </a>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          ))}
+                        <div className="flex items-center justify-between">
+                          <div className="text-xs text-muted-foreground">Leads found: {leads.length}</div>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <button
+                                type="button"
+                                className="p-1.5 rounded-lg hover:bg-muted transition-colors min-h-[32px] min-w-[32px] inline-flex items-center justify-center"
+                                aria-label="Leads actions"
+                              >
+                                <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-44">
+                              <DropdownMenuLabel>Leads actions</DropdownMenuLabel>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  const headers = ["name","email","linkedin"];
+                                  const escape = (v: string | undefined) => {
+                                    const s = (v ?? "").replace(/"/g, '""');
+                                    return /[",\n]/.test(s) ? `"${s}"` : s;
+                                  };
+                                  const rows = leads.map(l => headers.map(h => escape((l as any)[h])));
+                                  const csv = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+                                  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+                                  const url = URL.createObjectURL(blob);
+                                  const a = document.createElement('a');
+                                  a.href = url;
+                                  a.download = `leads-${new Date().toISOString().slice(0,10)}.csv`;
+                                  document.body.appendChild(a);
+                                  a.click();
+                                  document.body.removeChild(a);
+                                  URL.revokeObjectURL(url);
+                                  toast.success("CSV exported");
+                                }}
+                                className="cursor-pointer"
+                              >
+                                <FileDown className="mr-2 h-4 w-4" /> Export CSV
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  const count = leads.filter(l => !!l.email).length;
+                                  toast.info(`${count} email${count===1?"":"s"} queued for verification`);
+                                }}
+                                className="cursor-pointer"
+                              >
+                                <MailCheck className="mr-2 h-4 w-4" /> Verify emails
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
-                      </div>
+                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
+                           {leads.map((lead, i) => (
+                             <div key={i} className="rounded-lg border border-border bg-card p-3">
+                               {lead.name && <div className="font-medium text-sm mb-1">{lead.name}</div>}
+                               <div className="space-y-1 text-sm">
+                                 {lead.email && (
+                                   <div className="truncate">
+                                     <span className="text-muted-foreground mr-1">Email:</span>
+                                     <a className="underline" href={`mailto:${lead.email}`}>{lead.email}</a>
+                                   </div>
+                                 )}
+                                 {lead.linkedin && (
+                                   <div className="truncate">
+                                     <span className="text-muted-foreground mr-1">LinkedIn:</span>
+                                     <a className="underline" href={lead.linkedin} target="_blank" rel="noopener noreferrer">
+                                       {lead.linkedin.replace(/^https?:\/\//, '')}
+                                     </a>
+                                   </div>
+                                 )}
+                               </div>
+                             </div>
+                           ))}
+                         </div>
+                       </div>
                     );
                   }
 
