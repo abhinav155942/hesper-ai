@@ -378,26 +378,82 @@ I'm here to help with a wide range of tasks including answering questions, helpi
 
   const modelInfo = getModelInfo();
 
-  // Typing timer that counts up indefinitely while visible
+  // Typing timer upgraded to mm:ss:ms with rAF and a subtle shape-morph icon
   const TypingTimer: React.FC = () => {
-    const [elapsed, setElapsed] = useState(0);
+    const [elapsedMs, setElapsedMs] = useState(0);
     useEffect(() => {
-      const start = Date.now();
-      const id = setInterval(() => {
-        setElapsed(Math.floor((Date.now() - start) / 1000));
-      }, 1000);
-      return () => clearInterval(id);
+      let raf = 0;
+      const start = performance.now();
+      const tick = () => {
+        setElapsedMs(performance.now() - start);
+        raf = requestAnimationFrame(tick);
+      };
+      raf = requestAnimationFrame(tick);
+      return () => cancelAnimationFrame(raf);
     }, []);
 
-    const mm = String(Math.floor(elapsed / 60)).padStart(2, "0");
-    const ss = String(elapsed % 60).padStart(2, "0");
+    const totalMs = Math.max(0, Math.floor(elapsedMs));
+    const mm = String(Math.floor(totalMs / 60000)).padStart(2, "0");
+    const ss = String(Math.floor((totalMs % 60000) / 1000)).padStart(2, "0");
+    const ms = String(totalMs % 1000).padStart(3, "0");
 
     return (
-      <div className="inline-flex items-center gap-2 text-xs text-muted-foreground font-mono animate-pulse" role="status" aria-live="polite">
+      <div className="inline-flex items-center gap-2 text-xs text-muted-foreground font-mono" role="status" aria-live="polite">
+        <span className="relative inline-flex items-center justify-center">
+          <span
+            className="w-3.5 h-3.5 sm:w-4 sm:h-4 bg-[linear-gradient(135deg,var(--color-primary),var(--color-chart-5))] shadow-[0_0_8px_rgba(26,115,232,0.35)] [animation:var(--animate-shape-morph)]"
+            aria-hidden
+          />
+        </span>
         <span>runtime:</span>
-        <span>{mm}:{ss}</span>
-      </div>);
+        <span>{mm}:{ss}:{ms}</span>
+      </div>
+    );
+  };
 
+  // 20-minute waiting timeline shown while awaiting webhook response
+  const WaitTimeline: React.FC<{ active: boolean }>= ({ active }) => {
+    const DURATION = 20 * 60 * 1000; // 20 minutes
+    const [elapsed, setElapsed] = useState(0);
+
+    useEffect(() => {
+      if (!active) return;
+      let raf = 0;
+      const start = performance.now();
+      const tick = () => {
+        setElapsed(prev => {
+          const now = performance.now();
+          const next = now - start;
+          return Math.min(next, DURATION);
+        });
+        raf = requestAnimationFrame(tick);
+      };
+      raf = requestAnimationFrame(tick);
+      return () => cancelAnimationFrame(raf);
+    }, [active]);
+
+    if (!active) return null;
+
+    const remaining = Math.max(0, DURATION - elapsed);
+    const mm = String(Math.floor(remaining / 60000)).padStart(2, "0");
+    const ss = String(Math.floor((remaining % 60000) / 1000)).padStart(2, "0");
+
+    const pct = Math.min(100, (elapsed / DURATION) * 100);
+
+    return (
+      <div className="px-2 sm:px-4 py-2">
+        <div className="rounded-full h-1.5 bg-secondary/80 overflow-hidden">
+          <div
+            className="h-full bg-[linear-gradient(90deg,var(--color-primary),var(--color-chart-1),var(--color-chart-5))] [animation:var(--animate-timeline-shimmer)]"
+            style={{ width: `${pct}%` }}
+          />
+        </div>
+        <div className="mt-1.5 flex items-center justify-between text-[10px] sm:text-xs text-muted-foreground font-mono">
+          <span>waiting for webhook…</span>
+          <span>{mm}:{ss} remaining</span>
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -419,6 +475,9 @@ I'm here to help with a wide range of tasks including answering questions, helpi
           <span className="text-muted-foreground truncate">{modelInfo.description}</span>
         </div>
       </div>
+
+      {/* 20-min timeline while waiting */}
+      <WaitTimeline active={isTyping || isLoading} />
 
       {/* Messages Area */}
       <div
@@ -450,7 +509,7 @@ I'm here to help with a wide range of tasks including answering questions, helpi
           }
             <div className="pb-1 sm:pb-0">
               {message.isTyping ? (
-                <div className="flex items-center gap-1" role="status" aria-live="polite">
+                <div className="flex items-center gap-2" role="status" aria-live="polite">
                   <TypingTimer />
                 </div>
               ) : (

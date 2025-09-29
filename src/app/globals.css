@@ -1,3 +1,5 @@
+/* Updated: 2025-09-29T03:03:06.955Z */
+/* Updated: 2025-09-28T12:29:35.792Z */
 /* Updated: 2025-09-28T09:45:07.384Z */
 /* Updated: 2025-09-28T08:17:23.115Z */
 /* Updated: 2025-09-28T07:56:18.061Z */
@@ -94,6 +96,43 @@
     to {
       height: 0;
     }
+  }
+
+  /* Shape morphing for the minimalist infinity loop icon */
+  --animate-shape-morph: shape-morph 3.2s ease-in-out infinite;
+  @keyframes shape-morph {
+    0% {
+      border-radius: 12%;
+      clip-path: inset(0% round 12%);
+    }
+    20% {
+      border-radius: 50%;
+      clip-path: inset(0% round 50%);
+    }
+    40% {
+      border-radius: 6%;
+      clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+    }
+    60% {
+      border-radius: 8%;
+      clip-path: polygon(50% 0%, 93% 25%, 93% 75%, 50% 100%, 7% 75%, 7% 25%);
+    }
+    80% {
+      border-radius: 16%;
+      clip-path: polygon(12% 12%, 88% 12%, 88% 88%, 12% 88%);
+    }
+    100% {
+      border-radius: 12%;
+      clip-path: inset(0% round 12%);
+    }
+  }
+
+  /* Gentle shimmer for timeline fill */
+  --animate-timeline-shimmer: timeline-shimmer 1.8s linear infinite;
+  @keyframes timeline-shimmer {
+    0% { opacity: 0.7; filter: blur(0.5px); }
+    50% { opacity: 1; filter: blur(0.8px); }
+    100% { opacity: 0.7; filter: blur(0.5px); }
   }
 
   --font-heading-large: "Google Sans", sans-serif;
