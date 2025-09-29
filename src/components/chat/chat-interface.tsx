@@ -75,6 +75,51 @@ export default function ChatInterface({ selectedModel, onBack, initialMessage }:
   const prevCountRef = useRef(0);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
 
+  // Parse leads from HTML-ish list blocks produced by the AI
+  const parseLeadsFromHtml = (html: string): Array<{ name?: string; email?: string; linkedin?: string }> => {
+    if (!html || typeof window === 'undefined') return [];
+    // Quick check to avoid unnecessary parsing
+    if (!/<ul>/i.test(html) || !/Name:|Email:|LinkedIn:/i.test(html)) return [];
+
+    try {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(`<div>${html}</div>`, 'text/html');
+      const lists = Array.from(doc.querySelectorAll('ul'));
+      const leads = lists.map((ul) => {
+        const li = Array.from(ul.querySelectorAll('li'));
+        const obj: { name?: string; email?: string; linkedin?: string } = {};
+
+        // Name
+        const nameLi = li.find((n) => /name:/i.test(n.textContent || ''));
+        if (nameLi) obj.name = (nameLi.textContent || '').replace(/\s*Name:\s*/i, '').trim();
+
+        // Email
+        const emailAnchor = ul.querySelector('a[href^="mailto:"]') as HTMLAnchorElement | null;
+        if (emailAnchor) {
+          obj.email = emailAnchor.textContent?.trim() || emailAnchor.href.replace(/^mailto:/, '');
+        } else {
+          const emailLi = li.find((n) => /email:/i.test(n.textContent || ''));
+          if (emailLi) obj.email = (emailLi.textContent || '').replace(/\s*Email:\s*/i, '').trim();
+        }
+
+        // LinkedIn
+        const linkedinAnchor = Array.from(ul.querySelectorAll('a')).find((a) => /linkedin\.com\//i.test(a.href)) as HTMLAnchorElement | undefined;
+        if (linkedinAnchor) {
+          obj.linkedin = linkedinAnchor.href;
+        } else {
+          const linkLi = li.find((n) => /linkedin:/i.test(n.textContent || ''));
+          if (linkLi) obj.linkedin = (linkLi.textContent || '').replace(/\s*LinkedIn:\s*/i, '').trim();
+        }
+
+        return obj;
+      }).filter((l) => l.name || l.email || l.linkedin);
+
+      return leads;
+    } catch {
+      return [];
+    }
+  };
+
   useEffect(() => {
     if (!('SpeechRecognition' in window || 'webkitSpeechRecognition' in window)) {
       return;
@@ -404,15 +449,52 @@ I'm here to help with a wide range of tasks including answering questions, helpi
               </div>
           }
             <div className="pb-1 sm:pb-0">
-              {message.isTyping ?
-            <div className="flex items-center gap-1" role="status" aria-live="polite">
+              {message.isTyping ? (
+                <div className="flex items-center gap-1" role="status" aria-live="polite">
                   <TypingTimer />
-                </div> :
-
-            <div className="whitespace-pre-wrap text-sm leading-relaxed !text-black !bg-white !shadow-none !border-double break-words">
-                  {message.content}
                 </div>
-            }
+              ) : (
+                (() => {
+                  const leads = message.type === 'assistant' ? parseLeadsFromHtml(message.content) : [];
+                  if (leads.length > 0) {
+                    return (
+                      <div className="space-y-3">
+                        <div className="text-xs text-muted-foreground">Leads found: {leads.length}</div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
+                          {leads.map((lead, i) => (
+                            <div key={i} className="rounded-lg border border-border bg-card p-3">
+                              {lead.name && <div className="font-medium text-sm mb-1">{lead.name}</div>}
+                              <div className="space-y-1 text-sm">
+                                {lead.email && (
+                                  <div className="truncate">
+                                    <span className="text-muted-foreground mr-1">Email:</span>
+                                    <a className="underline" href={`mailto:${lead.email}`}>{lead.email}</a>
+                                  </div>
+                                )}
+                                {lead.linkedin && (
+                                  <div className="truncate">
+                                    <span className="text-muted-foreground mr-1">LinkedIn:</span>
+                                    <a className="underline" href={lead.linkedin} target="_blank" rel="noopener noreferrer">
+                                      {lead.linkedin.replace(/^https?:\/\//, '')}
+                                    </a>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  // Fallback: plain text content
+                  return (
+                    <div className="whitespace-pre-wrap text-sm leading-relaxed !text-black !bg-white !shadow-none !border-double break-words">
+                      {message.content}
+                    </div>
+                  );
+                })()
+              )}
             </div>
 
             {message.type === 'assistant' && !message.isTyping &&
@@ -529,6 +611,6 @@ I'm here to help with a wide range of tasks including answering questions, helpi
           </p>
         </div>
       </div>
-    </div>);
-
+    </div>
+  );
 }
