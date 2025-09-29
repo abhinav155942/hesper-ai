@@ -10,9 +10,13 @@ const N8N_WEBHOOK_URL = "/api/hesper/chat";
 
 async function fetchN8nReply(message: string, model: string): Promise<string> {
   try {
+    const token = typeof window !== 'undefined' ? localStorage.getItem("bearer_token") : null;
     const res = await fetch(N8N_WEBHOOK_URL, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
+      },
       body: JSON.stringify({
         message,
         model
@@ -199,6 +203,8 @@ export default function ChatInterface({ selectedModel, onBack, initialMessage }:
   }, []);
 
   const handleInitialMessage = async (message: string) => {
+    if (inFlightRef.current) return; // prevent concurrent initial sends
+    inFlightRef.current = true;
     const currentModelName = selectedModel === 'hesper-pro' ? "Hesper Pro" : "Hesper";
     const userMessage: Message = {
       id: `user-${Date.now()}`,
@@ -225,9 +231,7 @@ export default function ChatInterface({ selectedModel, onBack, initialMessage }:
     try {
       const reply = await fetchN8nReply(message, selectedModel);
 
-      // Remove typing indicator and add response
-      setMessages((prev) => prev.filter((m) => !m.isTyping));
-
+      // Remove typing indicator and add response (with dedupe)
       const assistantMessage: Message = {
         id: `assistant-${Date.now()}`,
         type: 'assistant',
@@ -236,20 +240,30 @@ export default function ChatInterface({ selectedModel, onBack, initialMessage }:
         modelName: currentModelName
       };
 
-      setMessages((prev) => [...prev, assistantMessage]);
+      setMessages((prev) => {
+        const withoutTyping = prev.filter((m) => !m.isTyping);
+        const lastAssistant = [...withoutTyping].reverse().find((m) => m.type === 'assistant');
+        if (lastAssistant && lastAssistant.content.trim() === (reply || "").trim()) {
+          return withoutTyping; // dedupe identical reply
+        }
+        return [...withoutTyping, assistantMessage];
+      });
     } catch (error) {
       setMessages([userMessage]);
       toast.error("Failed to get response. Please try again.");
     } finally {
       setIsLoading(false);
       setIsTyping(false);
+      inFlightRef.current = false;
     }
   };
 
   const handleSend = async (content: string) => {
     if (!content.trim() || isLoading) return;
     if (sendingRef.current) return; // prevent rapid double-send
+    if (inFlightRef.current) return; // prevent concurrent sends
     sendingRef.current = true;
+    inFlightRef.current = true;
     const currentModelName = selectedModel === 'hesper-pro' ? 'Hesper Pro' : 'Hesper';
 
     const userMessage: Message = {
@@ -278,9 +292,7 @@ export default function ChatInterface({ selectedModel, onBack, initialMessage }:
     try {
       const reply = await fetchN8nReply(userMessage.content, selectedModel);
 
-      // Remove typing indicator
-      setMessages((prev) => prev.filter((m) => !m.isTyping));
-
+      // Remove typing indicator and add response (with dedupe)
       const assistantMessage: Message = {
         id: `assistant-${Date.now()}`,
         type: 'assistant',
@@ -289,7 +301,14 @@ export default function ChatInterface({ selectedModel, onBack, initialMessage }:
         modelName: currentModelName
       };
 
-      setMessages((prev) => [...prev, assistantMessage]);
+      setMessages((prev) => {
+        const withoutTyping = prev.filter((m) => !m.isTyping);
+        const lastAssistant = [...withoutTyping].reverse().find((m) => m.type === 'assistant');
+        if (lastAssistant && lastAssistant.content.trim() === (reply || "").trim()) {
+          return withoutTyping; // dedupe identical reply
+        }
+        return [...withoutTyping, assistantMessage];
+      });
     } catch (error) {
       // Remove typing indicator
       setMessages((prev) => prev.filter((m) => !m.isTyping));
@@ -298,6 +317,7 @@ export default function ChatInterface({ selectedModel, onBack, initialMessage }:
       setIsLoading(false);
       setIsTyping(false);
       sendingRef.current = false;
+      inFlightRef.current = false;
     }
   };
 
@@ -398,21 +418,20 @@ I'm here to help with a wide range of tasks including answering questions, helpi
       return () => cancelAnimationFrame(raf);
     }, []);
 
-    const totalMs = Math.max(0, Math.floor(elapsedMs));
-    const mm = String(Math.floor(totalMs / 60000)).padStart(2, "0");
-    const ss = String(Math.floor((totalMs % 60000) / 1000)).padStart(2, "0");
-    const ms = String(totalMs % 1000).padStart(3, "0");
-
     return (
-      <div className="inline-flex items-center gap-2 text-xs text-muted-foreground font-mono" role="status" aria-live="polite">
+      <div className="inline-flex items-center gap-2 text-xs text-muted-foreground" role="status" aria-live="polite">
         <span className="relative inline-flex items-center justify-center">
           <span
             className="w-3.5 h-3.5 sm:w-4 sm:h-4 bg-[linear-gradient(135deg,var(--color-primary),var(--color-chart-5))] shadow-[0_0_8px_rgba(26,115,232,0.35)] [animation:var(--animate-shape-morph)]"
             aria-hidden
           />
         </span>
-        <span>runtime:</span>
-        <span>{mm}:{ss}:{ms}</span>
+        <span className="inline-flex items-center gap-1">
+          <span className="sr-only">Assistant is typing</span>
+          <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/70 animate-bounce" />
+          <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/70 animate-bounce" style={{ animationDelay: '0.15s' }} />
+          <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/70 animate-bounce" style={{ animationDelay: '0.3s' }} />
+        </span>
       </div>
     );
   };
@@ -480,6 +499,11 @@ I'm here to help with a wide range of tasks including answering questions, helpi
           <span className="text-muted-foreground">•</span>
           <span className="text-muted-foreground truncate">{modelInfo.description}</span>
         </div>
+      </div>
+
+      {/* SMTP setup note */}
+      <div className="px-3 py-2 text-[11px] sm:text-xs bg-[#FFF3CD] text-[#8A6D3B] border-b border-border">
+        ⚠️ Please setup your SMTP in Settings so the AI Agent can send emails.
       </div>
 
       {/* 20-min timeline while waiting */}
@@ -723,6 +747,9 @@ I'm here to help with a wide range of tasks including answering questions, helpi
             "Pro model provides deeper analysis and research-backed responses" :
             "Fast responses for everyday questions and tasks"
             }
+          </p>
+          <p className="text-[11px] text-muted-foreground mt-1">
+            ⚠️ Please setup your SMTP in Settings so the AI Agent can send emails. <a href="/settings" className="underline underline-offset-2">Open Settings</a>
           </p>
         </div>
       </div>

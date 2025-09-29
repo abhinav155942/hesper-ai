@@ -1,4 +1,4 @@
-import { sqliteTable, integer, text } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, integer, text, index } from 'drizzle-orm/sqlite-core';
 
 
 
@@ -69,3 +69,63 @@ export const verification = sqliteTable("verification", {
     () => new Date(),
   ),
 });
+
+// Settings tables
+export const smtpSettings = sqliteTable('smtp_settings', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  userId: integer('user_id').notNull(),
+  smtpUsername: text('smtp_username'),
+  smtpPassword: text('smtp_password'),
+  smtpHost: text('smtp_host'),
+  smtpPort: integer('smtp_port'),
+  clientHostname: text('client_hostname'),
+  sslTlsEnabled: integer('ssl_tls_enabled', { mode: 'boolean' }).default(false),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+}, (table) => ({
+  userIdIdx: index('smtp_settings_user_id_idx').on(table.userId),
+}));
+
+export const emailFormatSettings = sqliteTable('email_format_settings', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  userId: integer('user_id').notNull(),
+  emailTone: text('email_tone'),
+  emailDescription: text('email_description'),
+  emailSignature: text('email_signature'),
+  subjectTemplates: text('subject_templates'),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+}, (table) => ({
+  userIdIdx: index('email_format_settings_user_id_idx').on(table.userId),
+}));
+
+export const businessIntro = sqliteTable('business_intro', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  userId: integer('user_id').notNull(),
+  userName: text('user_name'),
+  businessDescription: text('business_description'),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+}, (table) => ({
+  userIdIdx: index('business_intro_user_id_idx').on(table.userId),
+}));
+
+export const businessPros = sqliteTable('business_pros', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  userId: integer('user_id').notNull(),
+  value: text('value').notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+}, (table) => ({
+  userIdIdx: index('business_pros_user_id_idx').on(table.userId),
+}));
+
+export const businessDifferences = sqliteTable('business_differences', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  userId: integer('user_id').notNull(),
+  value: text('value').notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+}, (table) => ({
+  userIdIdx: index('business_differences_user_id_idx').on(table.userId),
+}));
