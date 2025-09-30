@@ -88,7 +88,7 @@ export const smtpSettings = sqliteTable('smtp_settings', {
 
 export const emailFormatSettings = sqliteTable('email_format_settings', {
   id: integer('id').primaryKey({ autoIncrement: true }),
-  userId: integer('user_id').notNull(),
+  userId: text('user_id').notNull().references(() => user.id),
   emailTone: text('email_tone'),
   emailDescription: text('email_description'),
   emailSignature: text('email_signature'),
@@ -102,7 +102,7 @@ export const emailFormatSettings = sqliteTable('email_format_settings', {
 
 export const businessIntro = sqliteTable('business_intro', {
   id: integer('id').primaryKey({ autoIncrement: true }),
-  userId: integer('user_id').notNull(),
+  userId: text('user_id').notNull().references(() => user.id),
   userName: text('user_name'),
   businessDescription: text('business_description'),
   businessIntro: text('business_intro'),
@@ -114,7 +114,7 @@ export const businessIntro = sqliteTable('business_intro', {
 
 export const businessPros = sqliteTable('business_pros', {
   id: integer('id').primaryKey({ autoIncrement: true }),
-  userId: integer('user_id').notNull(),
+  userId: text('user_id').notNull().references(() => user.id),
   value: text('value').notNull(),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
@@ -124,10 +124,32 @@ export const businessPros = sqliteTable('business_pros', {
 
 export const businessDifferences = sqliteTable('business_differences', {
   id: integer('id').primaryKey({ autoIncrement: true }),
-  userId: integer('user_id').notNull(),
+  userId: text('user_id').notNull().references(() => user.id),
   value: text('value').notNull(),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
 }, (table) => ({
   userIdIdx: index('business_differences_user_id_idx').on(table.userId),
+}));
+
+// Chat tables
+export const chats = sqliteTable('chats', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  userId: text('user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
+  title: text('title'),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+}, (table) => ({
+  userIdUpdatedAtIdx: index('chats_user_id_updated_at_idx').on(table.userId, table.updatedAt),
+}));
+
+export const messages = sqliteTable('messages', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  chatId: integer('chat_id').notNull().references(() => chats.id, { onDelete: 'cascade' }),
+  userId: text('user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
+  role: text('role').notNull().$type<'user' | 'assistant'>(),
+  content: text('content').notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+}, (table) => ({
+  chatIdCreatedAtIdx: index('messages_chat_id_created_at_idx').on(table.chatId, table.createdAt),
 }));

@@ -1,12 +1,19 @@
 "use client";
 
-import * as React from "react";
 import { useState, useEffect } from "react";
 import Header from "@/components/sections/header";
 import Sidebar from "@/components/sections/sidebar";
 import MainContent from "@/components/sections/main-content";
+import { useSession } from "@/lib/auth-client";
+import { useRouter } from "next/navigation";
 
+/**
+ * Home page client component
+ * Manages sidebar, model selection, chat mode, and session state
+ */
 export const HomeClient: React.FC = () => {
+  const router = useRouter();
+  const { data: session, isPending } = useSession();
   const [isMobile, setIsMobile] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [selectedModel, setSelectedModel] = useState<"hesper-1.0v" | "hesper-pro">(
@@ -14,7 +21,7 @@ export const HomeClient: React.FC = () => {
   );
   const [chatMode, setChatMode] = useState(false);
   const [chatKey, setChatKey] = useState(0);
-  const [selectedChatId, setSelectedChatId] = useState<number | null>(null);
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
@@ -24,19 +31,30 @@ export const HomeClient: React.FC = () => {
   }, []);
 
   const handleNewChat = () => {
+    if (isPending) return;
+    if (!session?.user) {
+      router.push('/sign-in');
+      return;
+    }
     setChatMode(true);
-    setSelectedChatId(null);
     setChatKey((prev) => prev + 1);
+    setCurrentSessionId(null);
     setSidebarOpen(false);
   };
 
-  const handleSelectChat = (id: number) => {
-    setSelectedChatId(id);
+  const handleLoadSession = (id: string) => {
+    if (isPending) return;
+    if (!session?.user) {
+      router.push('/sign-in');
+      return;
+    }
+    setCurrentSessionId(id);
     setChatMode(true);
-    setSidebarOpen(false);
-    // bump key to force fresh mount if switching
-    setChatKey((prev) => prev + 1);
   };
+
+  if (isPending) {
+    return <div className="flex items-center justify-center h-screen">Loading...</div>;
+  }
 
   return (
     <div className="flex h-screen flex-col bg-background overflow-hidden">
@@ -51,7 +69,7 @@ export const HomeClient: React.FC = () => {
           setSidebarOpen={setSidebarOpen}
           isMobile={isMobile}
           onNewChat={handleNewChat}
-          onSelectChat={handleSelectChat}
+          onSelectSession={handleLoadSession}
         />
         {isMobile && sidebarOpen && (
           <div
@@ -65,7 +83,8 @@ export const HomeClient: React.FC = () => {
             chatMode={chatMode}
             onChatModeChange={setChatMode}
             chatKey={chatKey}
-            selectedChatId={selectedChatId}
+            currentSessionId={currentSessionId}
+            onLoadSession={handleLoadSession}
           />
         </div>
       </div>

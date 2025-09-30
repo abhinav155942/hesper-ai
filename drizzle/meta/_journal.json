@@ -57,6 +57,20 @@
       "when": 1759155299447,
       "tag": "0007_confused_roughhouse",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1759158687337,
+      "tag": "0008_complex_swarm",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1759197770542,
+      "tag": "0009_concerned_shadowcat",
+      "breakpoints": true
     }
   ]
 }

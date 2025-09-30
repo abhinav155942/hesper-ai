@@ -57,28 +57,28 @@ export async function PATCH(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Check if record exists for this user
+    // Check if record exists for this user - use user.id as string directly
     const existingRecord = await db.select()
       .from(emailFormatSettings)
-      .where(eq(emailFormatSettings.userId, parseInt(user.id)))
+      .where(eq(emailFormatSettings.userId, user.id))
       .limit(1);
 
     let updatedRecord;
 
     if (existingRecord.length > 0) {
-      // Update existing record
+      // Update existing record - use user.id as string directly
       updatedRecord = await db.update(emailFormatSettings)
         .set({
           ...updateData,
           updatedAt: new Date()
         })
-        .where(eq(emailFormatSettings.userId, parseInt(user.id)))
+        .where(eq(emailFormatSettings.userId, user.id))
         .returning();
     } else {
-      // Insert new record (upsert)
+      // Insert new record (upsert) - use user.id as string directly
       updatedRecord = await db.insert(emailFormatSettings)
         .values({
-          userId: parseInt(user.id),
+          userId: user.id,
           ...updateData,
           createdAt: new Date(),
           updatedAt: new Date()

@@ -1,8 +1,68 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
 import { smtpSettings } from '@/db/schema';
-import { eq, and } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { getCurrentUser } from '@/lib/auth';
+
+// GET handler for SMTP settings with pagination
+export async function GET(request: NextRequest) {
+  try {
+    const user = await getCurrentUser(request);
+    if (!user) {
+      return NextResponse.json({ 
+        error: 'Authentication required',
+        code: 'AUTH_REQUIRED' 
+      }, { status: 401 });
+    }
+
+    const { searchParams } = new URL(request.url);
+    const limit = Math.min(parseInt(searchParams.get('limit') || '50'), 100);
+    const offset = parseInt(searchParams.get('offset') || '0');
+
+    // Validate pagination parameters
+    if (isNaN(limit) || limit <= 0) {
+      return NextResponse.json({ 
+        error: 'Limit must be a positive integer',
+        code: 'INVALID_LIMIT' 
+      }, { status: 400 });
+    }
+
+    if (isNaN(offset) || offset < 0) {
+      return NextResponse.json({ 
+        error: 'Offset must be a non-negative integer',
+        code: 'INVALID_OFFSET' 
+      }, { status: 400 });
+    }
+
+    // Query SMTP settings with all columns, pagination, and ordering - use user.id as string directly
+    const smtpRecords = await db.select({
+      id: smtpSettings.id,
+      user_id: smtpSettings.userId,
+      smtp_username: smtpSettings.smtpUsername,
+      smtp_password: smtpSettings.smtpPassword,
+      smtp_host: smtpSettings.smtpHost,
+      smtp_port: smtpSettings.smtpPort,
+      client_hostname: smtpSettings.clientHostname,
+      ssl_tls_enabled: smtpSettings.sslTlsEnabled,
+      created_at: smtpSettings.createdAt,
+      updated_at: smtpSettings.updatedAt
+    })
+      .from(smtpSettings)
+      .where(eq(smtpSettings.userId, user.id))
+      .orderBy(smtpSettings.id) // Order by id ASC
+      .limit(limit)
+      .offset(offset);
+
+    return NextResponse.json(smtpRecords, { status: 200 });
+
+  } catch (error) {
+    console.error('GET /api/settings/smtp error:', error);
+    return NextResponse.json({ 
+      error: 'Internal server error: ' + error,
+      code: 'INTERNAL_ERROR' 
+    }, { status: 500 });
+  }
+}
 
 export async function PATCH(request: NextRequest) {
   try {
@@ -46,10 +106,10 @@ export async function PATCH(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Check if record exists for this user
+    // Check if record exists for this user - use user.id as string directly
     const existingRecord = await db.select()
       .from(smtpSettings)
-      .where(eq(smtpSettings.userId, parseInt(user.id)))
+      .where(eq(smtpSettings.userId, user.id))
       .limit(1);
 
     const updateData: any = {
@@ -88,15 +148,15 @@ export async function PATCH(request: NextRequest) {
     let result;
 
     if (existingRecord.length > 0) {
-      // Update existing record
+      // Update existing record - use user.id as string directly
       result = await db.update(smtpSettings)
         .set(updateData)
-        .where(eq(smtpSettings.userId, parseInt(user.id)))
+        .where(eq(smtpSettings.userId, user.id))
         .returning();
     } else {
-      // Insert new record
+      // Insert new record - use user.id as string directly
       const insertData = {
-        userId: parseInt(user.id),
+        userId: user.id,
         smtpUsername: smtp_username || null,
         smtpPassword: smtp_password || null,
         smtpHost: smtp_host || null,

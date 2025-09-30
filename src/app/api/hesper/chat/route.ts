@@ -1,6 +1,5 @@
 import { NextRequest } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
-import { getSettingsKeyValueLines } from "@/lib/settings-helpers";
 import { getUserSettingsJson } from "@/lib/settings-helpers";
 
 const N8N_WEBHOOK_URL = "https://abhinavt333.app.n8n.cloud/webhook/f36d4e7e-9b5a-4834-adb7-cf088808c191/chat";
@@ -11,11 +10,52 @@ const pending = new Map<string, Promise<{ text: string; status: number; contentT
 const cache = new Map<string, { data: { text: string; status: number; contentType: string }; expires: number }>();
 const CACHE_TTL_MS = 5000;
 
+// Ensure we always send a complete settings shape with nulls when missing
+function coalesce<T>(v: T | "" | undefined | null): T | null {
+  return v === undefined || v === null || v === "" ? null : (v as T);
+}
+
+function ensureSettingsShape(raw: any) {
+  const smtp = raw?.smtp || null;
+  return {
+    // business
+    user_name: coalesce<string>(raw?.user_name),
+    business_description: coalesce<string>(raw?.business_description),
+    business_intro: coalesce<string>(raw?.business_intro),
+    pros: Array.isArray(raw?.pros) ? raw.pros : [],
+    differences: Array.isArray(raw?.differences) ? raw.differences : [],
+
+    // email format
+    email_tone: coalesce<string>(raw?.email_tone),
+    email_description: coalesce<string>(raw?.email_description),
+    email_signature: coalesce<string>(raw?.email_signature),
+    subject_templates: Array.isArray(raw?.subject_templates) ? raw.subject_templates : [],
+    email_format: coalesce<string>(raw?.email_format),
+
+    // smtp
+    smtp: smtp
+      ? {
+          host: coalesce<string>(smtp.host),
+          port: smtp.port ?? null,
+          username: coalesce<string>(smtp.username),
+          password: coalesce<string>(smtp.password),
+        }
+      : {
+          host: null,
+          port: null,
+          username: null,
+          password: null,
+        },
+  };
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const message = body?.message ?? body?.prompt ?? body?.text ?? body?.query ?? "";
     const model = body?.model ?? "";
+    const historyIn = Array.isArray(body?.history) ? body.history : [];
+    const chatId = body?.chatId ?? null;
 
     if (!message) {
       return Response.json({ error: "No message provided" }, { status: 400 });
@@ -51,13 +91,33 @@ export async function POST(req: NextRequest) {
       let settings: any = {};
       try {
         if (user?.id) {
-          settings = await getUserSettingsJson(String(user.id));
+          const raw = await getUserSettingsJson(String(user.id));
+          settings = ensureSettingsShape(raw);
+        } else {
+          settings = ensureSettingsShape({});
         }
-      } catch {}
+      } catch {
+        settings = ensureSettingsShape({});
+      }
+
+      // Take up to last 6 messages (user/assistant objects with {role, content})
+      const history = historyIn
+        .filter((m: any) => m && (m.role === "user" || m.role === "assistant") && typeof m.content === "string")
+        .slice(-6);
 
       const payload = {
-        ...settings,
-        user_message: message
+        user: user
+          ? {
+              id: String(user.id),
+              email: user.email ?? null,
+              name: user.name ?? null,
+            }
+          : null,
+        chat_id: chatId ?? null,
+        model: model || null,
+        user_message: message,
+        history,
+        settings,
       };
 
       // Send as JSON to n8n

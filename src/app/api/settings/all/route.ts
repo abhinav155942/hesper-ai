@@ -19,7 +19,17 @@ export async function GET(request: NextRequest) {
       }, { status: 401 });
     }
 
-    // Query all settings tables concurrently for the authenticated user - use user.id as string directly
+    // Add validation for user.id
+    if (!user.id || typeof user.id !== 'string') {
+      console.error('Invalid user ID:', user.id);
+      return NextResponse.json({ 
+        error: 'Invalid authentication' 
+      }, { status: 401 });
+    }
+
+    const userId = user.id;
+
+    // Query all settings tables concurrently for the authenticated user
     const [
       smtpResult,
       emailFormatResult,
@@ -27,23 +37,20 @@ export async function GET(request: NextRequest) {
       businessProsResult,
       businessDifferencesResult
     ] = await Promise.all([
-      // SMTP Settings (all records for user with full columns)
+      // SMTP Settings
       db.select({
-        id: smtpSettings.id,
-        user_id: smtpSettings.userId,
         smtp_username: smtpSettings.smtpUsername,
         smtp_password: smtpSettings.smtpPassword,
         smtp_host: smtpSettings.smtpHost,
         smtp_port: smtpSettings.smtpPort,
         client_hostname: smtpSettings.clientHostname,
         ssl_tls_enabled: smtpSettings.sslTlsEnabled,
-        created_at: smtpSettings.createdAt,
-        updated_at: smtpSettings.updatedAt
       })
         .from(smtpSettings)
-        .where(eq(smtpSettings.userId, user.id)),
+        .where(eq(smtpSettings.userId, userId))
+        .limit(1),
 
-      // Email Format Settings (single record with new email_format field)
+      // Email Format Settings
       db.select({
         email_tone: emailFormatSettings.emailTone,
         email_description: emailFormatSettings.emailDescription,
@@ -52,43 +59,62 @@ export async function GET(request: NextRequest) {
         email_format: emailFormatSettings.emailFormat
       })
         .from(emailFormatSettings)
-        .where(eq(emailFormatSettings.userId, parseInt(user.id)))
+        .where(eq(emailFormatSettings.userId, userId))
         .limit(1),
 
-      // Business Intro (single record with new business_intro field)
+      // Business Intro
       db.select({
         user_name: businessIntro.userName,
         business_description: businessIntro.businessDescription,
         business_intro: businessIntro.businessIntro
       })
         .from(businessIntro)
-        .where(eq(businessIntro.userId, parseInt(user.id)))
+        .where(eq(businessIntro.userId, userId))
         .limit(1),
 
-      // Business Pros (multiple records) - use user.id as string directly
+      // Business Pros
       db.select({
         id: businessPros.id,
         value: businessPros.value
       })
         .from(businessPros)
-        .where(eq(businessPros.userId, parseInt(user.id))),
+        .where(eq(businessPros.userId, userId)),
 
-      // Business Differences (multiple records) - use user.id as string directly
+      // Business Differences
       db.select({
         id: businessDifferences.id,
         value: businessDifferences.value
       })
         .from(businessDifferences)
-        .where(eq(businessDifferences.userId, parseInt(user.id)))
+        .where(eq(businessDifferences.userId, userId))
     ]);
 
-    // Format response according to requirements
+    // Flatten the response to match frontend expectations
+    const smtpData = smtpResult[0] || {};
+    const emailData = emailFormatResult[0] || {};
+    const businessData = businessIntroResult[0] || {};
+
     const response = {
-      smtp: smtpResult || [], // Return all SMTP settings records
-      emailFormat: emailFormatResult.length > 0 ? emailFormatResult[0] : null,
-      businessIntro: businessIntroResult.length > 0 ? businessIntroResult[0] : null,
-      businessPros: businessProsResult || [],
-      businessDifferences: businessDifferencesResult || []
+      // SMTP fields
+      smtp_username: smtpData.smtp_username || null,
+      smtp_password: smtpData.smtp_password || null,
+      smtp_host: smtpData.smtp_host || null,
+      smtp_port: smtpData.smtp_port || null,
+      client_hostname: smtpData.client_hostname || null,
+      ssl_tls_enabled: smtpData.ssl_tls_enabled || false,
+      // Email format fields
+      email_tone: emailData.email_tone || null,
+      email_description: emailData.email_description || null,
+      email_signature: emailData.email_signature || null,
+      subject_templates: emailData.subject_templates || null,
+      email_format: emailData.email_format || null,
+      // Business intro fields
+      user_name: businessData.user_name || null,
+      business_description: businessData.business_description || null,
+      business_intro: businessData.business_intro || null,
+      // Lists
+      business_pros: businessProsResult || [],
+      business_differences: businessDifferencesResult || []
     };
 
     return NextResponse.json(response, { status: 200 });
@@ -96,7 +122,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('GET /api/settings/all error:', error);
     return NextResponse.json({ 
-      error: 'Internal server error: ' + error 
+      error: 'Internal server error' 
     }, { status: 500 });
   }
 }

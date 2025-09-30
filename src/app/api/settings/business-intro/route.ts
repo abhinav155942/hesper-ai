@@ -31,10 +31,10 @@ export async function PATCH(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Check if record exists for this user
+    // Check if record exists for this user - use user.id as string directly
     const existingRecord = await db.select()
       .from(businessIntro)
-      .where(eq(businessIntro.userId, parseInt(user.id)))
+      .where(eq(businessIntro.userId, user.id))
       .limit(1);
 
     let updatedRecord;
@@ -42,9 +42,9 @@ export async function PATCH(request: NextRequest) {
     const changedFields: { [key: string]: string } = {};
 
     if (existingRecord.length === 0) {
-      // Insert new record
+      // Insert new record - use user.id as string directly
       const insertData: any = {
-        userId: parseInt(user.id),
+        userId: user.id,
         createdAt: currentTime,
         updatedAt: currentTime
       };
@@ -91,7 +91,7 @@ export async function PATCH(request: NextRequest) {
       } else {
         updatedRecord = await db.update(businessIntro)
           .set(updateData)
-          .where(eq(businessIntro.userId, parseInt(user.id)))
+          .where(eq(businessIntro.userId, user.id))
           .returning();
       }
     }
