@@ -146,10 +146,10 @@ export async function getUserSettingsJson(userId: string): Promise<any> {
       businessDifferencesResult
     ] = await Promise.all([
       db.select().from(smtpSettings).where(eq(smtpSettings.userId, userId)).limit(1),
-      db.select().from(emailFormatSettings).where(eq(emailFormatSettings.userId, userIdInt)).limit(1),
-      db.select().from(businessIntro).where(eq(businessIntro.userId, userIdInt)).limit(1),
-      db.select().from(businessPros).where(eq(businessPros.userId, userIdInt)),
-      db.select().from(businessDifferences).where(eq(businessDifferences.userId, userIdInt))
+      db.select().from(emailFormatSettings).where(eq(emailFormatSettings.userId, userId)).limit(1),
+      db.select().from(businessIntro).where(eq(businessIntro.userId, userId)).limit(1),
+      db.select().from(businessPros).where(eq(businessPros.userId, userId)),
+      db.select().from(businessDifferences).where(eq(businessDifferences.userId, userId))
     ]);
 
     const smtp = smtpResult[0] || null;
