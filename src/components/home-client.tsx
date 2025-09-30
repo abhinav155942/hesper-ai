@@ -1,14 +1,11 @@
 "use client";
 
+import * as React from "react";
 import { useState, useEffect } from "react";
 import Header from "@/components/sections/header";
 import Sidebar from "@/components/sections/sidebar";
 import MainContent from "@/components/sections/main-content";
 
-/**
- * Home page client component
- * Manages sidebar, model selection, chat mode, and session state
- */
 export const HomeClient: React.FC = () => {
   const [isMobile, setIsMobile] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -17,7 +14,7 @@ export const HomeClient: React.FC = () => {
   );
   const [chatMode, setChatMode] = useState(false);
   const [chatKey, setChatKey] = useState(0);
-  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
+  const [selectedChatId, setSelectedChatId] = useState<number | null>(null);
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
@@ -28,14 +25,17 @@ export const HomeClient: React.FC = () => {
 
   const handleNewChat = () => {
     setChatMode(true);
+    setSelectedChatId(null);
     setChatKey((prev) => prev + 1);
-    setCurrentSessionId(null);
     setSidebarOpen(false);
   };
 
-  const handleLoadSession = (id: string) => {
-    setCurrentSessionId(id);
+  const handleSelectChat = (id: number) => {
+    setSelectedChatId(id);
     setChatMode(true);
+    setSidebarOpen(false);
+    // bump key to force fresh mount if switching
+    setChatKey((prev) => prev + 1);
   };
 
   return (
@@ -51,7 +51,7 @@ export const HomeClient: React.FC = () => {
           setSidebarOpen={setSidebarOpen}
           isMobile={isMobile}
           onNewChat={handleNewChat}
-          onSelectSession={handleLoadSession}
+          onSelectChat={handleSelectChat}
         />
         {isMobile && sidebarOpen && (
           <div
@@ -65,8 +65,7 @@ export const HomeClient: React.FC = () => {
             chatMode={chatMode}
             onChatModeChange={setChatMode}
             chatKey={chatKey}
-            currentSessionId={currentSessionId}
-            onLoadSession={handleLoadSession}
+            selectedChatId={selectedChatId}
           />
         </div>
       </div>
