@@ -381,8 +381,8 @@ export default function SubscriptionsPage() {
                   </TableRow>
                   <TableRow>
                     <TableCell><Badge>Basic</Badge></TableCell>
-                    <TableCell className="!whitespace-pre-line">100 credits/month, including hesper 1.0v </TableCell>
-                    <TableCell>1 credit per message</TableCell>
+                    <TableCell className="!whitespace-pre-line">100 credits/month, including hesper 1.0v</TableCell>
+                    <TableCell className="!whitespace-pre-line">3 messages = 1 credit (hesper 1.0v)</TableCell>
                     <TableCell className="!whitespace-pre-line">30 messages/day (resets at midnight)</TableCell>
                     <TableCell>
                       <Link href="/checkout" className="text-primary hover:underline">
@@ -392,8 +392,8 @@ export default function SubscriptionsPage() {
                   </TableRow>
                   <TableRow>
                     <TableCell><Badge>Pro</Badge></TableCell>
-                    <TableCell className="!whitespace-pre-line">200 credits/month, advanced features including Hesper pro, 50 messages/day</TableCell>
-                    <TableCell>1 credit per message</TableCell>
+                    <TableCell className="!whitespace-pre-line">200 credits/month, advanced features including Hesper pro, 50 messages/day, lead generation</TableCell>
+                    <TableCell className="!whitespace-pre-line !w-[17%] !h-full">3 pro messages = 5 credits\nLead generation: 5 credits per 10 quality leads</TableCell>
                     <TableCell>50 messages/day (resets at midnight)</TableCell>
                     <TableCell>
                       <Link href="/checkout" className="text-primary hover:underline">
@@ -405,7 +405,7 @@ export default function SubscriptionsPage() {
               </Table>
             </div>
             <p className="text-sm mt-4 !text-rose-600">
-              Credits are deducted per message sent. Unused monthly credits do not roll over. Extra credits can be purchased at any time through the checkout page.
+              Credits deducted based on message type and features used. Unused monthly credits do not roll over. Extra credits can be purchased at any time through the checkout page.
             </p>
           </CardContent>
         </Card>
