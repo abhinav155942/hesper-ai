@@ -20,7 +20,7 @@ export default function SettingsPage() {
   const [smtpUsername, setSmtpUsername] = useState("");
   const [smtpPassword, setSmtpPassword] = useState("");
   const [smtpHost, setSmtpHost] = useState("");
-  const [smtpPort, setSmtpPort] = useState<number | "">("");
+  const [smtpPort, setSmtpPort] = useState<string>("");  // Changed to string
   const [clientHostname, setClientHostname] = useState("");
   const [sslTlsEnabled, setSslTlsEnabled] = useState(false);
   const [savingSmtp, setSavingSmtp] = useState(false);
@@ -44,21 +44,42 @@ export default function SettingsPage() {
   const [addingPro, setAddingPro] = useState(false);
   const [addingDifference, setAddingDifference] = useState(false);
 
+  // Redirect if not authenticated
+  useEffect(() => {
+    if (!isPending && !session?.user) {
+      router.push("/sign-in");
+    }
+  }, [session, isPending, router]);
+
+  // Set name from session
+  useEffect(() => {
+    if (session?.user?.name) {
+      setName(session.user.name);
+    }
+  }, [session]);
+
   // Prefill settings from API
   useEffect(() => {
     const load = async () => {
-      if (!session?.user) return;
+      if (!session?.user?.id) return; // Add check for user.id
       try {
         const token = localStorage.getItem("bearer_token");
+        if (!token) {
+          console.error("No bearer token found");
+          return;
+        }
         const res = await fetch("/api/settings/all", {
           headers: { Authorization: `Bearer ${token}` },
         });
-        if (!res.ok) return;
+        if (!res.ok) {
+          console.error("Failed to fetch settings:", await res.text());
+          return;
+        }
         const data = await res.json();
         // SMTP
         if (data?.smtp_username !== undefined) setSmtpUsername(data.smtp_username || "");
         if (data?.smtp_host !== undefined) setSmtpHost(data.smtp_host || "");
-        if (data?.smtp_port !== undefined) setSmtpPort(data.smtp_port ?? "");
+        if (data?.smtp_port !== undefined) setSmtpPort(data.smtp_port?.toString() ?? "");
         if (data?.client_hostname !== undefined) setClientHostname(data.client_hostname || "");
         if (data?.ssl_tls_enabled !== undefined) setSslTlsEnabled(!!data.ssl_tls_enabled);
         // Email format
@@ -149,7 +170,7 @@ export default function SettingsPage() {
           smtp_username: smtpUsername || null,
           smtp_password: smtpPassword || null,
           smtp_host: smtpHost || null,
-          smtp_port: smtpPort === "" ? null : Number(smtpPort),
+          smtp_port: smtpPort ? Number(smtpPort) : null,
           client_hostname: clientHostname || null,
           ssl_tls_enabled: sslTlsEnabled,
         }),
@@ -227,9 +248,8 @@ export default function SettingsPage() {
     }
   };
 
-  // Add Business Pro
-  const handleAddPro = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // Add Business Pro - removed e param
+  const handleAddPro = async () => {
     if (!newPro.trim()) {
       toast.error("Please enter a pro");
       return;
@@ -267,9 +287,8 @@ export default function SettingsPage() {
     }
   };
 
-  // Add Business Difference
-  const handleAddDifference = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // Add Business Difference - removed e param
+  const handleAddDifference = async () => {
     if (!newDifference.trim()) {
       toast.error("Please enter a differentiation point");
       return;

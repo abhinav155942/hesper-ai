@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { authClient } from "@/lib/auth-client";
+import { signIn, useSession } from "@/lib/auth-client";
 import { toast } from "sonner";
 import Link from "next/link";
 
@@ -19,12 +19,13 @@ export default function SignInPage() {
   });
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const { refetch } = useSession();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
-    const { error } = await authClient.signIn.email({
+    const { data, error } = await signIn.email({
       email: formData.email,
       password: formData.password,
       rememberMe: formData.rememberMe,
@@ -38,7 +39,13 @@ export default function SignInPage() {
       return;
     }
 
+    // Store the bearer token from the session
+    if (data?.session?.token) {
+      localStorage.setItem("bearer_token", data.session.token);
+    }
+
     toast.success("Signed in successfully!");
+    await refetch();
     router.push("/");
   };
 

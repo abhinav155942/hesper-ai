@@ -6,11 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { authClient } from "@/lib/auth-client";
+import { signUp, useSession } from "@/lib/auth-client";
 import { toast } from "sonner";
 import Link from "next/link";
 
 export default function SignUpPage() {
+  const { refetch } = useSession();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -28,7 +29,7 @@ export default function SignUpPage() {
     }
     setLoading(true);
 
-    const { error } = await authClient.signUp.email({
+    const { data, error } = await signUp.email({
       email: formData.email,
       name: formData.name,
       password: formData.password,
@@ -44,8 +45,14 @@ export default function SignUpPage() {
       return;
     }
 
-    toast.success("Account created! Please check your email to verify.");
-    router.push("/sign-in?registered=true");
+    // Store the bearer token from the session
+    if (data?.session?.token) {
+      localStorage.setItem("bearer_token", data.session.token);
+    }
+
+    toast.success("Account created and signed in!");
+    await refetch();
+    router.push("/");
   };
 
   return (
