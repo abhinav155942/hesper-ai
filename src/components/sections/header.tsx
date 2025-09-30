@@ -167,11 +167,11 @@ const Header = ({ onMenuClick, selectedModel, onModelChange }: HeaderProps) => {
         
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="flex items-center gap-1 md:gap-1.5 lg:gap-2 rounded-md px-2 py-1 md:px-2.5 md:py-1.5 lg:px-3 lg:py-2 border border-border bg-background text-xs md:text-sm font-normal text-foreground transition-colors hover:bg-secondary focus:outline-none focus:ring-2 focus:ring-ring min-w-0 md:min-w-[120px] lg:min-w-[140px] xl:min-w-[160px]">
-              <CurrentIcon className="h-3.5 w-3.5 md:h-4 md:w-4 shrink-0 flex-shrink-0" />
-              <span className="hidden xs:inline truncate max-w-[80px] md:max-w-[100px]">{selectedModelDisplay}</span>
+            <button className="flex items-center gap-1 md:gap-1.5 lg:gap-2 rounded-md px-1.5 py-0.5 md:px-2.5 md:py-1.5 lg:px-3 lg:py-2 border border-border bg-background text-xs md:text-sm font-normal text-foreground transition-colors hover:bg-secondary focus:outline-none focus:ring-2 focus:ring-ring min-w-0 md:min-w-[120px] lg:min-w-[140px] xl:min-w-[160px]">
+              <CurrentIcon className="h-3 w-3 md:h-4 md:w-4 shrink-0 flex-shrink-0" />
+              <span className="hidden xs:inline truncate max-w-[60px] md:max-w-[100px]">{selectedModelDisplay}</span>
               <span className="xs:hidden truncate">Model</span>
-              <ChevronDown className="h-3.5 w-3.5 md:h-4 md:w-4 shrink-0 opacity-50 ml-auto flex-shrink-0" />
+              <ChevronDown className="h-3 w-3 md:h-4 md:w-4 shrink-0 opacity-50 ml-auto flex-shrink-0" />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="w-[280px] md:w-[320px] p-2">
@@ -251,7 +251,7 @@ const Header = ({ onMenuClick, selectedModel, onModelChange }: HeaderProps) => {
         {/* View messages info button and popover */}
         <div className="relative flex-shrink-0">
           <button
-            className="inline-flex h-7 md:h-8 lg:h-9 items-center justify-center rounded-lg border border-border bg-background px-2 md:px-2.5 lg:px-3 text-xs md:text-sm font-medium text-foreground transition-colors hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 whitespace-nowrap"
+            className="inline-flex h-6 md:h-8 lg:h-9 items-center justify-center rounded-lg border border-border bg-background px-1.5 md:px-2.5 lg:px-3 text-xs md:text-sm font-medium text-foreground transition-colors hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 whitespace-nowrap"
             onClick={() => setUsageOpen((o) => !o)}
             onMouseEnter={() => setUsageOpen(true)}
             onMouseLeave={() => setUsageOpen(false)}>
@@ -272,9 +272,9 @@ const Header = ({ onMenuClick, selectedModel, onModelChange }: HeaderProps) => {
         {session?.user ?
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="inline-flex h-7 md:h-8 lg:h-9 items-center justify-center rounded-lg border border-border bg-background px-2 md:px-2.5 lg:px-3 text-xs md:text-sm font-medium text-foreground transition-colors hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
-                <span className="max-w-[80px] md:max-w-[120px] lg:max-w-[140px] truncate">{session.user.name || session.user.email}</span>
-                <ChevronDown className="ml-0.5 md:ml-1 lg:ml-2 h-3.5 w-3.5 md:h-4 md:w-4 shrink-0 opacity-60" />
+              <button className="inline-flex h-6 md:h-8 lg:h-9 items-center justify-center rounded-lg border border-border bg-background px-1.5 md:px-2.5 lg:px-3 text-xs md:text-sm font-medium text-foreground transition-colors hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+                <span className="max-w-[60px] md:max-w-[120px] lg:max-w-[140px] truncate">{session.user.name || session.user.email}</span>
+                <ChevronDown className="ml-0.5 md:ml-1 lg:ml-2 h-3 w-3 md:h-4 md:w-4 shrink-0 opacity-60" />
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48 p-1">
@@ -289,7 +289,7 @@ const Header = ({ onMenuClick, selectedModel, onModelChange }: HeaderProps) => {
 
         <Link
           href="/sign-in"
-          className="inline-flex h-7 md:h-8 lg:h-9 items-center justify-center rounded-lg bg-primary px-2.5 md:px-3 lg:px-4 xl:px-6 text-xs md:text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 flex-shrink-0">
+          className="inline-flex h-6 md:h-8 lg:h-9 items-center justify-center rounded-lg bg-primary px-2 md:px-3 lg:px-4 xl:px-6 text-xs md:text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 flex-shrink-0">
 
             Sign in
           </Link>
