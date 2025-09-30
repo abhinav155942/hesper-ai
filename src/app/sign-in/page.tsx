@@ -28,21 +28,25 @@ export default function SignInPage() {
     const { data, error } = await signIn.email({
       email: formData.email,
       password: formData.password,
-      rememberMe: formData.rememberMe,
       callbackURL: "/",
     });
 
     setLoading(false);
 
     if (error?.code) {
-      toast.error("Invalid email or password. Please make sure you have already registered an account and try again.");
+      // More specific error messages based on better-auth error codes
+      const errorMap = {
+        INVALID_CREDENTIALS: "Invalid email or password.",
+        EMAIL_NOT_VERIFIED: "Please verify your email before signing in.",
+        // Add more as needed
+      };
+      const message = errorMap[error.code] || "Sign in failed. Please try again.";
+      toast.error(message + " Please make sure you have already registered an account and try again.");
       return;
     }
 
-    // Store the bearer token from the session
-    if (data?.session?.token) {
-      localStorage.setItem("bearer_token", data.session.token);
-    }
+    // Rely on global onSuccess in auth-client to store bearer_token from headers
+    // No need for manual storage here as data.session may not contain token with bearer plugin
 
     toast.success("Signed in successfully!");
     await refetch();
