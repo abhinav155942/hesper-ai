@@ -8,7 +8,7 @@ import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuIte
 
 const N8N_WEBHOOK_URL = "/api/hesper/chat";
 
-async function fetchN8nReply(message: string, model: string, chatHistory: Array<{ role: string; content: string }>): Promise<string> {
+async function fetchN8nReply(message: string, model: string, chatHistory: Array<{role: string;content: string;}>): Promise<string> {
   try {
     const token = typeof window !== 'undefined' ? localStorage.getItem("bearer_token") : null;
     const res = await fetch(N8N_WEBHOOK_URL, {
@@ -88,7 +88,7 @@ export default function ChatInterface({ selectedModel, onBack, initialMessage, c
   const sessionIdRef = useRef<string | null>(null);
 
   // Parse leads from HTML-ish list blocks produced by the AI
-  const parseLeadsFromHtml = (html: string): Array<{ name?: string; email?: string; linkedin?: string }> => {
+  const parseLeadsFromHtml = (html: string): Array<{name?: string;email?: string;linkedin?: string;}> => {
     if (!html || typeof window === 'undefined') return [];
     // Quick check to avoid unnecessary parsing
     if (!/<ul>/i.test(html) || !/Name:|Email:|LinkedIn:/i.test(html)) return [];
@@ -99,7 +99,7 @@ export default function ChatInterface({ selectedModel, onBack, initialMessage, c
       const lists = Array.from(doc.querySelectorAll('ul'));
       const leads = lists.map((ul) => {
         const li = Array.from(ul.querySelectorAll('li'));
-        const obj: { name?: string; email?: string; linkedin?: string } = {};
+        const obj: {name?: string;email?: string;linkedin?: string;} = {};
 
         // Name
         const nameLi = li.find((n) => /name:/i.test(n.textContent || ''));
@@ -139,12 +139,12 @@ export default function ChatInterface({ selectedModel, onBack, initialMessage, c
       sessionIdRef.current = `s_${Date.now()}`;
     }
     const id = sessionIdRef.current;
-    const titleSource = msgs.find(m => m.type === 'user')?.content || "New chat";
+    const titleSource = msgs.find((m) => m.type === 'user')?.content || "New chat";
     const title = (titleSource || "New chat").slice(0, 60);
     const lastUpdated = Date.now();
 
     // Store compact messages for history open (role/content/timestamp)
-    const compact = msgs.map(m => ({
+    const compact = msgs.map((m) => ({
       role: m.type === 'user' ? 'user' : 'assistant',
       content: m.content,
       timestamp: m.timestamp instanceof Date ? m.timestamp.toISOString() : new Date().toISOString()
@@ -152,29 +152,29 @@ export default function ChatInterface({ selectedModel, onBack, initialMessage, c
     try {
       localStorage.setItem(`hesper_chat_session_${id}`, JSON.stringify({ id, title, lastUpdated, messages: compact }));
       const listRaw = localStorage.getItem('hesper_chat_sessions');
-      let list: Array<{ id: string; title: string; lastUpdated: number }> = [];
+      let list: Array<{id: string;title: string;lastUpdated: number;}> = [];
       if (listRaw) {
-        try { list = JSON.parse(listRaw) || []; } catch { list = []; }
+        try {list = JSON.parse(listRaw) || [];} catch {list = [];}
       }
       // upsert
-      const existingIdx = list.findIndex(s => s.id === id);
+      const existingIdx = list.findIndex((s) => s.id === id);
       if (existingIdx >= 0) {
         list[existingIdx] = { id, title, lastUpdated };
       } else {
         list.unshift({ id, title, lastUpdated });
       }
       // keep last 50
-      list = list.sort((a,b)=>b.lastUpdated-a.lastUpdated).slice(0,50);
+      list = list.sort((a, b) => b.lastUpdated - a.lastUpdated).slice(0, 50);
       localStorage.setItem('hesper_chat_sessions', JSON.stringify(list));
       // notify sidebar
       window.dispatchEvent(new CustomEvent('hesper:chat-sessions-updated'));
     } catch {}
   };
 
-  const buildHistory = (msgs: Message[]): Array<{ role: string; content: string }> => {
-    const pairs = msgs
-      .filter(m => !m.isTyping && m.content)
-      .map(m => ({ role: m.type === 'user' ? 'user' : 'assistant', content: m.content }));
+  const buildHistory = (msgs: Message[]): Array<{role: string;content: string;}> => {
+    const pairs = msgs.
+    filter((m) => !m.isTyping && m.content).
+    map((m) => ({ role: m.type === 'user' ? 'user' : 'assistant', content: m.content }));
     return pairs.slice(-6);
   };
 
@@ -270,7 +270,7 @@ export default function ChatInterface({ selectedModel, onBack, initialMessage, c
           content: m.content,
           timestamp: new Date(m.timestamp),
           modelName: selectedModel === 'hesper-pro' ? 'Hesper Pro' : 'Hesper'
-        })).filter(m => m.content);
+        })).filter((m) => m.content);
         setMessages(messages);
         sessionIdRef.current = id;
         // Notify parent
@@ -341,7 +341,7 @@ export default function ChatInterface({ selectedModel, onBack, initialMessage, c
       setMessages((prev) => {
         const withoutTyping = prev.filter((m) => !m.isTyping);
         const lastAssistant = [...withoutTyping].reverse().find((m) => m.type === 'assistant');
-        const next = (lastAssistant && lastAssistant.content.trim() === (reply || "").trim()) ? withoutTyping : [...withoutTyping, assistantMessage];
+        const next = lastAssistant && lastAssistant.content.trim() === (reply || "").trim() ? withoutTyping : [...withoutTyping, assistantMessage];
         // persist
         persistSession(next);
         return next;
@@ -409,7 +409,7 @@ export default function ChatInterface({ selectedModel, onBack, initialMessage, c
       setMessages((prev) => {
         const withoutTyping = prev.filter((m) => !m.isTyping);
         const lastAssistant = [...withoutTyping].reverse().find((m) => m.type === 'assistant');
-        const next = (lastAssistant && lastAssistant.content.trim() === (reply || "").trim()) ? withoutTyping : [...withoutTyping, assistantMessage];
+        const next = lastAssistant && lastAssistant.content.trim() === (reply || "").trim() ? withoutTyping : [...withoutTyping, assistantMessage];
         persistSession(next);
         return next;
       });
@@ -497,7 +497,7 @@ I'm here to help with a wide range of tasks including answering questions, helpi
   const getModelInfo = () => {
     if (selectedModel === 'hesper-pro') {
       return {
-        icon: <Brain className="h-4 w-4" />,
+        icon: <Brain className="!w-6/12 !h-full" />,
         name: "Hesper Pro", // new display name going forward
         description: "Advanced reasoning model"
       };
@@ -531,8 +531,8 @@ I'm here to help with a wide range of tasks including answering questions, helpi
         <span className="relative inline-flex items-center justify-center">
           <span
             className="w-3.5 h-3.5 sm:w-4 sm:h-4 bg-[linear-gradient(135deg,var(--color-primary),var(--color-chart-5))] shadow-[0_0_8px_rgba(26,115,232,0.35)] [animation:var(--animate-shape-morph)]"
-            aria-hidden
-          />
+            aria-hidden />
+
         </span>
         <span className="inline-flex items-center gap-1">
           <span className="sr-only">Assistant is typing</span>
@@ -540,12 +540,12 @@ I'm here to help with a wide range of tasks including answering questions, helpi
           <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/70 animate-bounce" style={{ animationDelay: '0.15s' }} />
           <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/70 animate-bounce" style={{ animationDelay: '0.3s' }} />
         </span>
-      </div>
-    );
+      </div>);
+
   };
 
   // 20-minute waiting timeline shown while awaiting webhook response
-  const WaitTimeline: React.FC<{ active: boolean }>= ({ active }) => {
+  const WaitTimeline: React.FC<{active: boolean;}> = ({ active }) => {
     const DURATION = 20 * 60 * 1000; // 20 minutes
     const [elapsed, setElapsed] = useState(0);
 
@@ -554,7 +554,7 @@ I'm here to help with a wide range of tasks including answering questions, helpi
       let raf = 0;
       const start = performance.now();
       const tick = () => {
-        setElapsed(prev => {
+        setElapsed((prev) => {
           const now = performance.now();
           const next = now - start;
           return Math.min(next, DURATION);
@@ -569,24 +569,24 @@ I'm here to help with a wide range of tasks including answering questions, helpi
 
     const remaining = Math.max(0, DURATION - elapsed);
     const mm = String(Math.floor(remaining / 60000)).padStart(2, "0");
-    const ss = String(Math.floor((remaining % 60000) / 1000)).padStart(2, "0");
+    const ss = String(Math.floor(remaining % 60000 / 1000)).padStart(2, "0");
 
-    const pct = Math.min(100, (elapsed / DURATION) * 100);
+    const pct = Math.min(100, elapsed / DURATION * 100);
 
     return (
       <div className="px-2 sm:px-4 py-2">
         <div className="rounded-full h-1.5 bg-secondary/80 overflow-hidden">
           <div
             className="h-full bg-[linear-gradient(90deg,var(--color-primary),var(--color-chart-1),var(--color-chart-5))] [animation:var(--animate-timeline-shimmer)]"
-            style={{ width: `${pct}%` }}
-          />
+            style={{ width: `${pct}%` }} />
+
         </div>
         <div className="mt-1.5 flex items-center justify-between text-[10px] sm:text-xs text-muted-foreground font-mono">
           <span>waiting for webhook…</span>
           <span>{mm}:{ss} remaining</span>
         </div>
-      </div>
-    );
+      </div>);
+
   };
 
   return (
@@ -595,8 +595,8 @@ I'm here to help with a wide range of tasks including answering questions, helpi
       <div className="flex items-center justify-between p-2 border-b border-border bg-card">
         <button
           onClick={onBack}
-          className="text-xs sm:text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1 min-h-[36px]"
-        >
+          className="text-xs sm:text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1 min-h-[36px]">
+
           <ChevronLeft className="h-4 w-4" />
           Back to homepage
         </button>
@@ -646,25 +646,25 @@ I'm here to help with a wide range of tasks including answering questions, helpi
               </div>
           }
             <div className="pb-1 sm:pb-0">
-              {message.isTyping ? (
-                <div className="flex items-center gap-2" role="status" aria-live="polite">
+              {message.isTyping ?
+            <div className="flex items-center gap-2" role="status" aria-live="polite">
                   <TypingTimer />
-                </div>
-              ) : (
-                (() => {
-                  const leads = message.type === 'assistant' ? parseLeadsFromHtml(message.content) : [];
-                  if (leads.length > 0) {
-                    return (
-                      <div className="space-y-3">
+                </div> :
+
+            (() => {
+              const leads = message.type === 'assistant' ? parseLeadsFromHtml(message.content) : [];
+              if (leads.length > 0) {
+                return (
+                  <div className="space-y-3">
                         <div className="flex items-center justify-between">
                           <div className="text-xs text-muted-foreground">Leads found: {leads.length}</div>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <button
-                                type="button"
-                                className="p-1.5 rounded-lg hover:bg-muted transition-colors min-h-[32px] min-w-[32px] inline-flex items-center justify-center"
-                                aria-label="Leads actions"
-                              >
+                            type="button"
+                            className="p-1.5 rounded-lg hover:bg-muted transition-colors min-h-[32px] min-w-[32px] inline-flex items-center justify-center"
+                            aria-label="Leads actions">
+
                                 <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
                               </button>
                             </DropdownMenuTrigger>
@@ -672,76 +672,76 @@ I'm here to help with a wide range of tasks including answering questions, helpi
                               <DropdownMenuLabel>Leads actions</DropdownMenuLabel>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem
-                                onClick={() => {
-                                  const headers = ["name","email","linkedin"];
-                                  const escape = (v: string | undefined) => {
-                                    const s = (v ?? "").replace(/"/g, '""');
-                                    return /[",\n]/.test(s) ? `"${s}"` : s;
-                                  };
-                                  const rows = leads.map(l => headers.map(h => escape((l as any)[h])));
-                                  const csv = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
-                                  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-                                  const url = URL.createObjectURL(blob);
-                                  const a = document.createElement('a');
-                                  a.href = url;
-                                  a.download = `leads-${new Date().toISOString().slice(0,10)}.csv`;
-                                  document.body.appendChild(a);
-                                  a.click();
-                                  document.body.removeChild(a);
-                                  URL.revokeObjectURL(url);
-                                  toast.success("CSV exported");
-                                }}
-                                className="cursor-pointer"
-                              >
+                            onClick={() => {
+                              const headers = ["name", "email", "linkedin"];
+                              const escape = (v: string | undefined) => {
+                                const s = (v ?? "").replace(/"/g, '""');
+                                return /[",\n]/.test(s) ? `"${s}"` : s;
+                              };
+                              const rows = leads.map((l) => headers.map((h) => escape((l as any)[h])));
+                              const csv = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
+                              const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+                              const url = URL.createObjectURL(blob);
+                              const a = document.createElement('a');
+                              a.href = url;
+                              a.download = `leads-${new Date().toISOString().slice(0, 10)}.csv`;
+                              document.body.appendChild(a);
+                              a.click();
+                              document.body.removeChild(a);
+                              URL.revokeObjectURL(url);
+                              toast.success("CSV exported");
+                            }}
+                            className="cursor-pointer">
+
                                 <FileDown className="mr-2 h-4 w-4" /> Export CSV
                               </DropdownMenuItem>
                               <DropdownMenuItem
-                                onClick={() => {
-                                  const count = leads.filter(l => !!l.email).length;
-                                  toast.info(`${count} email${count===1?"":"s"} queued for verification`);
-                                }}
-                                className="cursor-pointer"
-                              >
+                            onClick={() => {
+                              const count = leads.filter((l) => !!l.email).length;
+                              toast.info(`${count} email${count === 1 ? "" : "s"} queued for verification`);
+                            }}
+                            className="cursor-pointer">
+
                                 <MailCheck className="mr-2 h-4 w-4" /> Verify emails
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </div>
                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
-                           {leads.map((lead, i) => (
-                             <div key={i} className="rounded-lg border border-border bg-card p-3">
+                           {leads.map((lead, i) =>
+                      <div key={i} className="rounded-lg border border-border bg-card p-3">
                                {lead.name && <div className="font-medium text-sm mb-1">{lead.name}</div>}
                                <div className="space-y-1 text-sm">
-                                 {lead.email && (
-                                   <div className="truncate">
+                                 {lead.email &&
+                          <div className="truncate">
                                      <span className="text-muted-foreground mr-1">Email:</span>
                                      <a className="underline" href={`mailto:${lead.email}`}>{lead.email}</a>
                                    </div>
-                                 )}
-                                 {lead.linkedin && (
-                                   <div className="truncate">
+                          }
+                                 {lead.linkedin &&
+                          <div className="truncate">
                                      <span className="text-muted-foreground mr-1">LinkedIn:</span>
                                      <a className="underline" href={lead.linkedin} target="_blank" rel="noopener noreferrer">
                                        {lead.linkedin.replace(/^https?:\/\//, '')}
                                      </a>
                                    </div>
-                                 )}
+                          }
                                </div>
                              </div>
-                           ))}
+                      )}
                          </div>
-                       </div>
-                    );
-                  }
+                       </div>);
 
-                  // Fallback: plain text content
-                  return (
-                    <div className="whitespace-pre-wrap text-sm leading-relaxed !text-black !bg-white !shadow-none !border-double break-words">
+              }
+
+              // Fallback: plain text content
+              return (
+                <div className="whitespace-pre-wrap text-sm leading-relaxed !text-black !bg-white !shadow-none !border-double break-words">
                       {message.content}
-                    </div>
-                  );
-                })()
-              )}
+                    </div>);
+
+            })()
+            }
             </div>
 
             {message.type === 'assistant' && !message.isTyping &&
@@ -798,8 +798,8 @@ I'm here to help with a wide range of tasks including answering questions, helpi
               placeholder={`Ask ${modelInfo.name}...`}
               disabled={isLoading}
               className="flex-grow bg-transparent text-base text-foreground placeholder-muted-foreground outline-none border-none py-2 sm:py-3 px-2 sm:px-4 disabled:opacity-50 min-w-0"
-              style={{ WebkitAppearance: 'none' }}
-            />
+              style={{ WebkitAppearance: 'none' }} />
+
             
             <div className="flex items-center gap-0.5 sm:gap-1 sm:gap-2">
               <button
@@ -807,8 +807,8 @@ I'm here to help with a wide range of tasks including answering questions, helpi
                 disabled={isLoading}
                 onClick={() => fileInputRef.current?.click()}
                 className="p-1.5 sm:p-2 sm:p-2.5 rounded-full hover:bg-muted/80 transition-colors min-h-[36px] min-w-[36px] disabled:opacity-50"
-                aria-label="Attach file"
-              >
+                aria-label="Attach file">
+
                 <Upload className="h-4 sm:h-5 w-4 sm:w-5 text-muted-foreground" />
               </button>
               
@@ -817,8 +817,8 @@ I'm here to help with a wide range of tasks including answering questions, helpi
                 onClick={handleMicClick}
                 disabled={isLoading}
                 className={`p-1.5 sm:p-2 sm:p-2.5 rounded-full transition-colors min-h-[36px] min-w-[36px] ${isRecording ? 'bg-destructive/10 text-destructive' : 'hover:bg-muted/80 text-muted-foreground'}`}
-                aria-label={isRecording ? "Stop microphone" : "Use microphone"}
-              >
+                aria-label={isRecording ? "Stop microphone" : "Use microphone"}>
+
                 <Mic className={`h-4 sm:h-5 w-4 sm:w-5 ${isRecording ? 'animate-pulse' : ''}`} />
               </button>
               
@@ -827,8 +827,8 @@ I'm here to help with a wide range of tasks including answering questions, helpi
                 onClick={() => handleSend(inputValue)}
                 disabled={!inputValue.trim() || isLoading}
                 className="p-1.5 sm:p-2 sm:p-2.5 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed min-h-[36px] min-w-[36px]"
-                aria-label="Send message"
-              >
+                aria-label="Send message">
+
                 <Send className="h-4 sm:h-5 w-4 sm:w-5" />
               </button>
             </div>
@@ -841,12 +841,12 @@ I'm here to help with a wide range of tasks including answering questions, helpi
             onChange={(e) => {
               const file = e.target.files?.[0];
               if (file) {
-                setInputValue(prev => `${prev} [attached: ${file.name}]`.trim());
+                setInputValue((prev) => `${prev} [attached: ${file.name}]`.trim());
                 inputRef.current?.focus();
                 e.target.value = '';
               }
-            }}
-          />
+            }} />
+
         </form>
         
         <div className="text-center mt-2 sm:mt-3 hidden sm:block">
@@ -861,6 +861,6 @@ I'm here to help with a wide range of tasks including answering questions, helpi
           </p>
         </div>
       </div>
-    </div>
-  );
+    </div>);
+
 }
