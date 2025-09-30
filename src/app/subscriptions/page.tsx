@@ -372,7 +372,7 @@ export default function SubscriptionsPage() {
                     <TableCell><Badge variant="secondary">Free</Badge></TableCell>
                     <TableCell>Limited access to basic features</TableCell>
                     <TableCell>1 credit per message</TableCell>
-                    <TableCell>None, limited messages for free account</TableCell>
+                    <TableCell className="!whitespace-pre-line">None, limited messages for free account</TableCell>
                     <TableCell>
                       <Link href="/checkout" className="text-primary hover:underline">
                         Buy credits via PayPal
@@ -404,7 +404,7 @@ export default function SubscriptionsPage() {
                 </TableBody>
               </Table>
             </div>
-            <p className="text-sm text-muted-foreground mt-4">
+            <p className="text-sm mt-4 !text-rose-600">
               Credits are deducted per message sent. Unused monthly credits do not roll over. Extra credits can be purchased at any time through the checkout page.
             </p>
           </CardContent>
