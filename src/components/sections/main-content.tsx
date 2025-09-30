@@ -123,10 +123,10 @@ export default function MainContent({
                 className="flex-grow bg-transparent text-base md:text-lg text-foreground placeholder-muted-foreground outline-none border-none py-3 px-2 sm:px-4"
               />
               <button
+                type="button"
                 onClick={() => setLiveMode(true)}
                 className="p-2 text-gray-500 hover:text-primary transition-colors"
                 title="Start live Hesper talk"
-                disabled={!isConnected} // Assume connected state from parent if needed
               >
                 <Mic className="h-5 w-5" />
               </button>
