@@ -41,8 +41,8 @@ export interface UserSettingsResponse {
 // Helper function to get all settings as key-value lines for chat context
 export async function getSettingsKeyValueLines(userId: string): Promise<string[]> {
   try {
-    const userIdInt = parseInt(userId);
-    if (isNaN(userIdInt)) {
+    // Use the string userId directly (user_id is a TEXT column)
+    if (!userId) {
       return [];
     }
 
@@ -56,11 +56,11 @@ export async function getSettingsKeyValueLines(userId: string): Promise<string[]
       businessProsResult,
       businessDifferencesResult
     ] = await Promise.all([
-      db.select().from(smtpSettings).where(eq(smtpSettings.userId, userIdInt)).limit(1),
-      db.select().from(emailFormatSettings).where(eq(emailFormatSettings.userId, userIdInt)).limit(1),
-      db.select().from(businessIntro).where(eq(businessIntro.userId, userIdInt)).limit(1),
-      db.select().from(businessPros).where(eq(businessPros.userId, userIdInt)),
-      db.select().from(businessDifferences).where(eq(businessDifferences.userId, userIdInt))
+      db.select().from(smtpSettings).where(eq(smtpSettings.userId, userId)).limit(1),
+      db.select().from(emailFormatSettings).where(eq(emailFormatSettings.userId, userId)).limit(1),
+      db.select().from(businessIntro).where(eq(businessIntro.userId, userId)).limit(1),
+      db.select().from(businessPros).where(eq(businessPros.userId, userId)),
+      db.select().from(businessDifferences).where(eq(businessDifferences.userId, userId))
     ]);
 
     // Process SMTP settings
@@ -133,8 +133,8 @@ export async function getSettingsKeyValueLines(userId: string): Promise<string[]
 
 export async function getUserSettingsJson(userId: string): Promise<any> {
   try {
-    const userIdInt = parseInt(userId);
-    if (isNaN(userIdInt)) {
+    // Use the string userId directly (user_id is a TEXT column)
+    if (!userId) {
       return {};
     }
 

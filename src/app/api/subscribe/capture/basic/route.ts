@@ -92,6 +92,8 @@ export async function POST(request: NextRequest) {
         subscriptionPlan: 'basic',
         subscriptionExpiry: subscriptionExpiry,
         credits: newCredits,
+        basicMessageCount: 0, // Reset message counters
+        proMessageCount: 0,   // Reset message counters
         updatedAt: new Date()
       })
       .where(eq(user.id, currentUser.id))

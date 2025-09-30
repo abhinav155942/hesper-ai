@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import Header from "@/components/sections/header";
 import Sidebar from "@/components/sections/sidebar";
 import MainContent from "@/components/sections/main-content";
-import LiveVoiceAI from "@/components/LiveVoiceAI";
 
 /**
  * Home page client component
@@ -17,7 +16,6 @@ export const HomeClient: React.FC = () => {
     "hesper-1.0v"
   );
   const [chatMode, setChatMode] = useState(false);
-  const [showLive, setShowLive] = useState(false);
   const [chatKey, setChatKey] = useState(0);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
 
@@ -40,22 +38,12 @@ export const HomeClient: React.FC = () => {
     setChatMode(true);
   };
 
-  const handleLiveClick = () => {
-    setShowLive(!showLive);
-    if (!showLive) {
-      setChatMode(false);
-      setCurrentSessionId(null);
-    }
-  };
-
   return (
     <div className="flex h-screen flex-col bg-background overflow-hidden">
       <Header
         onMenuClick={() => setSidebarOpen(!sidebarOpen)}
         selectedModel={selectedModel}
         onModelChange={setSelectedModel}
-        onLiveClick={handleLiveClick}
-        showLive={showLive}
       />
       <div className="flex flex-1 overflow-hidden relative">
         <Sidebar
@@ -72,18 +60,14 @@ export const HomeClient: React.FC = () => {
           />
         )}
         <div className={`flex-1 overflow-auto ${isMobile ? 'w-full' : ''}`}>
-          {!showLive ? (
-            <MainContent
-              selectedModel={selectedModel}
-              chatMode={chatMode}
-              onChatModeChange={setChatMode}
-              chatKey={chatKey}
-              currentSessionId={currentSessionId}
-              onLoadSession={handleLoadSession}
-            />
-          ) : (
-            <LiveVoiceAI />
-          )}
+          <MainContent
+            selectedModel={selectedModel}
+            chatMode={chatMode}
+            onChatModeChange={setChatMode}
+            chatKey={chatKey}
+            currentSessionId={currentSessionId}
+            onLoadSession={handleLoadSession}
+          />
         </div>
       </div>
     </div>

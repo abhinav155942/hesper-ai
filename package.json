@@ -10,6 +10,7 @@
     },
     "dependencies": {
         "@babel/parser": "^7.28.4",
+        "@google/generative-ai": "^0.24.1",
         "@headlessui/react": "^2.2.8",
         "@heroicons/react": "^2.2.0",
         "@hookform/resolvers": "^5.1.1",
@@ -70,6 +71,7 @@
         "framer-motion": "^12.23.12",
         "input-otp": "^1.4.2",
         "lucide-react": "^0.544.0",
+        "mime": "^4.1.0",
         "mini-svg-data-uri": "^1.4.4",
         "motion": "^12.23.12",
         "motion-dom": "^12.23.12",
@@ -100,6 +102,7 @@
         "three": "^0.178.0",
         "three-globe": "^2.43.0",
         "vaul": "^1.1.2",
+        "ws": "^8.18.3",
         "zod": "^4.1.8"
     },
     "devDependencies": {

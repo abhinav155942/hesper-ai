@@ -42,11 +42,11 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Calculate credits cost
-    const creditsRequired = Math.ceil(numLeads / 10) * 5;
-
-    // Get current user's credits
-    const userRecord = await db.select({ credits: user.credits })
+    // Get current user's subscription and credits
+    const userRecord = await db.select({ 
+      credits: user.credits,
+      subscriptionPlan: user.subscriptionPlan
+    })
       .from(user)
       .where(eq(user.id, currentUser.id))
       .limit(1);
@@ -58,14 +58,27 @@ export async function POST(request: NextRequest) {
       }, { status: 404 });
     }
 
-    const currentCredits = userRecord[0].credits;
+    const userData = userRecord[0];
+    const subscriptionPlan = userData.subscriptionPlan || 'free';
+
+    // Restrict access to Pro users only
+    if (subscriptionPlan !== 'pro') {
+      return NextResponse.json({ 
+        error: 'Lead generation is only available in Pro plan.',
+        code: 'PRO_PLAN_REQUIRED' 
+      }, { status: 403 });
+    }
+
+    // Calculate credits cost
+    const creditsRequired = Math.ceil(numLeads / 10) * 5;
+    const currentCredits = userData.credits;
 
     // Check if user has sufficient credits
     if (currentCredits < creditsRequired) {
       return NextResponse.json({ 
         error: `Insufficient credits. You need ${creditsRequired} credits but only have ${currentCredits}. Please upgrade your plan.`,
         code: 'INSUFFICIENT_CREDITS' 
-      }, { status: 400 });
+      }, { status: 402 });
     }
 
     // Deduct credits from user's account

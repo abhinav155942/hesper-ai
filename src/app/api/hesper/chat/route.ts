@@ -106,7 +106,9 @@ export async function POST(req: NextRequest) {
           credits: user.credits,
           subscriptionPlan: user.subscriptionPlan,
           dailyMessages: user.dailyMessages,
-          lastResetDate: user.lastResetDate
+          lastResetDate: user.lastResetDate,
+          basicMessageCount: user.basicMessageCount,
+          proMessageCount: user.proMessageCount
         })
           .from(user)
           .where(eq(user.id, userId))
@@ -121,6 +123,8 @@ export async function POST(req: NextRequest) {
         const subscriptionPlan = userData.subscriptionPlan || 'free';
         let dailyMessages = userData.dailyMessages ?? 0;
         const lastResetDate = userData.lastResetDate;
+        let basicMessageCount = userData.basicMessageCount ?? 0;
+        let proMessageCount = userData.proMessageCount ?? 0;
 
         // Handle daily message limit for pro users
         if (subscriptionPlan === 'pro') {
@@ -146,13 +150,59 @@ export async function POST(req: NextRequest) {
           }
         }
 
-        // Check credits for non-pro plans or if pro user still has credits
-        if (subscriptionPlan !== 'pro' || currentCredits > 0) {
-          if (currentCredits < 1) {
-            return Response.json({ 
-              error: "Insufficient credits for this request", 
-              credits: currentCredits 
-            }, { status: 402 });
+        // Model-specific logic
+        let creditsToDeduct = 0;
+        let messageCountUpdate: any = {};
+
+        if (model === 'hesper-1.0v') {
+          // Basic model: Increment basicMessageCount, deduct 1 credit every 3 messages
+          const newBasicCount = basicMessageCount + 1;
+          messageCountUpdate.basicMessageCount = newBasicCount;
+
+          if (newBasicCount % 3 === 0) {
+            creditsToDeduct = 1;
+            if (currentCredits < creditsToDeduct) {
+              return Response.json({ 
+                error: "Insufficient credits for this request", 
+                credits: currentCredits,
+                required: creditsToDeduct
+              }, { status: 402 });
+            }
+          }
+        } else if (model === 'hesper-pro') {
+          // Pro model: Check subscription plan first, then credits
+          if (subscriptionPlan !== 'pro') {
+            if (currentCredits < 5) {
+              return Response.json({ 
+                error: "Hesper Pro requires Pro subscription or sufficient credits", 
+                credits: currentCredits 
+              }, { status: 402 });
+            }
+          }
+
+          const newProCount = proMessageCount + 1;
+          messageCountUpdate.proMessageCount = newProCount;
+
+          if (newProCount % 3 === 0) {
+            creditsToDeduct = 5;
+            if (currentCredits < creditsToDeduct) {
+              return Response.json({ 
+                error: "Insufficient credits for this request", 
+                credits: currentCredits,
+                required: creditsToDeduct
+              }, { status: 402 });
+            }
+          }
+        } else {
+          // Default/legacy behavior - check credits for non-pro plans
+          if (subscriptionPlan !== 'pro' || currentCredits > 0) {
+            if (currentCredits < 1) {
+              return Response.json({ 
+                error: "Insufficient credits for this request", 
+                credits: currentCredits 
+              }, { status: 402 });
+            }
+            creditsToDeduct = 1;
           }
         }
 
@@ -174,7 +224,8 @@ export async function POST(req: NextRequest) {
         if (upstream.ok) {
           // Update user after successful response
           const updates: any = {
-            updatedAt: new Date()
+            updatedAt: new Date(),
+            ...messageCountUpdate
           };
 
           // Increment daily messages for pro users
@@ -182,12 +233,9 @@ export async function POST(req: NextRequest) {
             updates.dailyMessages = dailyMessages + 1;
           }
 
-          // Deduct credit for credit-based plans if they have credits
-          if (subscriptionPlan !== 'pro' && currentCredits > 0) {
-            updates.credits = currentCredits - 1;
-          } else if (subscriptionPlan === 'pro' && currentCredits > 0) {
-            // Pro users with credits still get credit deduction
-            updates.credits = currentCredits - 1;
+          // Deduct credits if needed
+          if (creditsToDeduct > 0) {
+            updates.credits = currentCredits - creditsToDeduct;
           }
 
           await db.update(user)

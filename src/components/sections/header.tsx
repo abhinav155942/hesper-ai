@@ -13,17 +13,14 @@ import {
 "@/components/ui/dropdown-menu";
 import { useSession, signOut } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
 
 interface HeaderProps {
   onMenuClick?: () => void;
   selectedModel: 'hesper-1.0v' | 'hesper-pro';
   onModelChange: (model: 'hesper-1.0v' | 'hesper-pro') => void;
-  onLiveClick?: () => void;
-  showLive?: boolean;
 }
 
-const Header = ({ onMenuClick, selectedModel, onModelChange, onLiveClick, showLive }: HeaderProps) => {
+const Header = ({ onMenuClick, selectedModel, onModelChange }: HeaderProps) => {
   const [selectedModelDisplay, setSelectedModelDisplay] = React.useState("Hesper 1.0v");
   const [credits, setCredits] = useState(0);
   const [isSubscribed, setIsSubscribed] = useState(false);
@@ -158,11 +155,13 @@ const Header = ({ onMenuClick, selectedModel, onModelChange, onLiveClick, showLi
           onClick={onMenuClick}
           className="md:hidden p-1.5 rounded-lg hover:bg-muted transition-colors"
           aria-label="Menu">
-          <Menu className="h-4 w-4 text-foreground" />
-        </button>
+
+            <Menu className="h-4 w-4 text-foreground" />
+          </button>
         }
         <span
           className="text-base md:text-lg lg:text-xl xl:text-[22px] font-medium bg-gradient-to-r from-purple-600 via-pink-500 to-teal-500 bg-clip-text text-transparent">
+
           Hesper
         </span>
         
@@ -185,17 +184,19 @@ const Header = ({ onMenuClick, selectedModel, onModelChange, onLiveClick, showLi
                   key={model.id}
                   onClick={() => onModelChange(model.id)}
                   className={`flex flex-col items-start gap-2 p-3 cursor-pointer rounded-md transition-colors ${
-                    isSelected ? 'bg-primary/10 border border-primary/20' : 'hover:bg-secondary'}`}>
+                  isSelected ? 'bg-primary/10 border border-primary/20' : 'hover:bg-secondary'}`
+                  }>
+
                   <div className="flex items-center gap-2 w-full">
                     <Icon className="h-4 w-4 shrink-0" />
                     <span className="font-medium flex-1">{model.name}</span>
                     <div className="flex items-center gap-2">
                       {model.badge === "Pro" && <Crown className="h-3 w-3 text-amber-500" />}
                       <span className={`text-xs px-2 py-0.5 rounded-full ${
-                        model.badge === "Pro" ?
-                        "bg-amber-100 text-amber-700" :
-                        "bg-green-100 text-green-700"
-                      }`}>
+                      model.badge === "Pro" ?
+                      "bg-amber-100 text-amber-700" :
+                      "bg-green-100 text-green-700"}`
+                      }>
                         {model.badge}
                       </span>
                     </div>
@@ -212,17 +213,20 @@ const Header = ({ onMenuClick, selectedModel, onModelChange, onLiveClick, showLi
                       href="/checkout"
                       className="text-xs text-primary hover:underline"
                       onClick={(e) => e.stopPropagation()}>
-                      Upgrade
-                    </Link>
+
+                        Upgrade
+                      </Link>
                     }
                   </div>
                 </DropdownMenuItem>);
+
             })}
             
             <div className="border-t mt-2 pt-2">
               <Link
                 href="/about-hesper"
                 className="flex items-center gap-2 p-2 text-xs text-muted-foreground hover:text-foreground transition-colors">
+
                 Learn more about Hesper models
               </Link>
             </div>
@@ -234,17 +238,13 @@ const Header = ({ onMenuClick, selectedModel, onModelChange, onLiveClick, showLi
         <Link
           href="/subscriptions"
           className="hidden xl:block text-sm text-muted-foreground hover:text-primary transition-colors">
+
           Subscriptions
         </Link>
-        <Button
-          onClick={onLiveClick}
-          className={`hidden xl:block text-sm transition-colors bg-transparent border-none p-0 h-auto ${showLive ? 'text-primary font-medium' : 'text-muted-foreground hover:text-primary'}`}
-          variant="ghost">
-          {showLive ? 'Chat' : 'Live Voice'}
-        </Button>
         <Link
           href="/checkout"
           className="hidden xl:block text-sm text-muted-foreground hover:text-primary transition-colors whitespace-nowrap">
+
           <span className="hidden sm:inline">Credits: </span>{credits}
         </Link>
 

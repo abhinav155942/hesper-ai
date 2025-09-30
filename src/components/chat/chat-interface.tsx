@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import { useState, useRef, useEffect } from "react";
-import { forwardRef, useImperativeHandle } from "react";
 import { Send, Mic, RotateCcw, Copy, ThumbsUp, ThumbsDown, Zap, Brain, ChevronDown, ChevronLeft, Upload, MoreHorizontal, FileDown, MailCheck } from 'lucide-react';
 import { toast } from "sonner";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuLabel } from "@/components/ui/dropdown-menu";
@@ -66,392 +65,378 @@ interface ChatInterfaceProps {
   initialMessage?: string;
   currentSessionId?: string;
   onLoadSession?: (id: string) => void;
-  voiceMode?: boolean; // New: Enable voice-specific behavior
-  onVoiceInput?: (msg: string) => void; // Optional callback for voice handling
 }
 
-const ChatInterface = forwardRef<HTMLDivElement, ChatInterfaceProps>(
-  function ChatInterface(
-    { 
-      selectedModel, 
-      onBack, 
-      initialMessage, 
-      currentSessionId, 
-      onLoadSession,
-      voiceMode = false,
-      onVoiceInput 
-    }, 
-    ref
-  ) {
-    const [messages, setMessages] = useState<Message[]>([]);
-    const [inputValue, setInputValue] = useState("");
-    const [isLoading, setIsLoading] = useState(false);
-    const [isTyping, setIsTyping] = useState(false);
-    const [showScrollButton, setShowScrollButton] = useState(false);
-    const [hasNewMessages, setHasNewMessages] = useState(false);
-    const [initialized, setInitialized] = useState(false);
-    const [isRecording, setIsRecording] = useState(false);
-    const [sessionLoaded, setSessionLoaded] = useState(false);
-    const messagesEndRef = useRef<HTMLDivElement>(null);
-    const inputRef = useRef<HTMLInputElement>(null);
-    const fileInputRef = useRef<HTMLInputElement>(null);
-    const scrollContainerRef = useRef<HTMLDivElement>(null);
-    const prevCountRef = useRef(0);
-    const recognitionRef = useRef<SpeechRecognition | null>(null);
-    const inFlightRef = useRef(false);
-    const sendingRef = useRef(false);
-    const sessionIdRef = useRef<string | null>(null);
+export default function ChatInterface({ selectedModel, onBack, initialMessage, currentSessionId, onLoadSession }: ChatInterfaceProps) {
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [inputValue, setInputValue] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
+  const [showScrollButton, setShowScrollButton] = useState(false);
+  const [hasNewMessages, setHasNewMessages] = useState(false);
+  const [initialized, setInitialized] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [sessionLoaded, setSessionLoaded] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const prevCountRef = useRef(0);
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const inFlightRef = useRef(false);
+  const sendingRef = useRef(false);
+  const sessionIdRef = useRef<string | null>(null);
 
-    // Parse leads from HTML-ish list blocks produced by the AI
-    const parseLeadsFromHtml = (html: string): Array<{name?: string;email?: string;linkedin?: string;}> => {
-      if (!html || typeof window === 'undefined') return [];
-      // Quick check to avoid unnecessary parsing
-      if (!/<ul>/i.test(html) || !/Name:|Email:|LinkedIn:/i.test(html)) return [];
+  // Parse leads from HTML-ish list blocks produced by the AI
+  const parseLeadsFromHtml = (html: string): Array<{name?: string;email?: string;linkedin?: string;}> => {
+    if (!html || typeof window === 'undefined') return [];
+    // Quick check to avoid unnecessary parsing
+    if (!/<ul>/i.test(html) || !/Name:|Email:|LinkedIn:/i.test(html)) return [];
 
-      try {
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(`<div>${html}</div>`, 'text/html');
-        const lists = Array.from(doc.querySelectorAll('ul'));
-        const leads = lists.map((ul) => {
-          const li = Array.from(ul.querySelectorAll('li'));
-          const obj: {name?: string;email?: string;linkedin?: string;} = {};
+    try {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(`<div>${html}</div>`, 'text/html');
+      const lists = Array.from(doc.querySelectorAll('ul'));
+      const leads = lists.map((ul) => {
+        const li = Array.from(ul.querySelectorAll('li'));
+        const obj: {name?: string;email?: string;linkedin?: string;} = {};
 
-          // Name
-          const nameLi = li.find((n) => /name:/i.test(n.textContent || ''));
-          if (nameLi) obj.name = (nameLi.textContent || '').replace(/\s*Name:\s*/i, '').trim();
+        // Name
+        const nameLi = li.find((n) => /name:/i.test(n.textContent || ''));
+        if (nameLi) obj.name = (nameLi.textContent || '').replace(/\s*Name:\s*/i, '').trim();
 
-          // Email
-          const emailAnchor = ul.querySelector('a[href^="mailto:"]') as HTMLAnchorElement | null;
-          if (emailAnchor) {
-            obj.email = emailAnchor.textContent?.trim() || emailAnchor.href.replace(/^mailto:/, '');
-          } else {
-            const emailLi = li.find((n) => /email:/i.test(n.textContent || ''));
-            if (emailLi) obj.email = (emailLi.textContent || '').replace(/\s*Email:\s*/i, '').trim();
-          }
-
-          // LinkedIn
-          const linkedinAnchor = Array.from(ul.querySelectorAll('a')).find((a) => /linkedin\.com\//i.test(a.href)) as HTMLAnchorElement | undefined;
-          if (linkedinAnchor) {
-            obj.linkedin = linkedinAnchor.href;
-          } else {
-            const linkLi = li.find((n) => /linkedin:/i.test(n.textContent || ''));
-            if (linkLi) obj.linkedin = (linkLi.textContent || '').replace(/\s*LinkedIn:\s*/i, '').trim();
-          }
-
-          return obj;
-        }).filter((l) => l.name || l.email || l.linkedin);
-
-        return leads;
-      } catch {
-        return [];
-      }
-    };
-
-    const persistSession = (msgs: Message[]) => {
-      if (typeof window === 'undefined') return;
-      // Initialize session id on first persist
-      if (!sessionIdRef.current) {
-        sessionIdRef.current = `s_${Date.now()}`;
-      }
-      const id = sessionIdRef.current;
-      const titleSource = msgs.find((m) => m.type === 'user')?.content || "New chat";
-      const title = (titleSource || "New chat").slice(0, 60);
-      const lastUpdated = Date.now();
-
-      // Store compact messages for history open (role/content/timestamp)
-      const compact = msgs.map((m) => ({
-        role: m.type === 'user' ? 'user' : 'assistant',
-        content: m.content,
-        timestamp: m.timestamp instanceof Date ? m.timestamp.toISOString() : new Date().toISOString()
-      }));
-      try {
-        localStorage.setItem(`hesper_chat_session_${id}`, JSON.stringify({ id, title, lastUpdated, messages: compact }));
-        const listRaw = localStorage.getItem('hesper_chat_sessions');
-        let list: Array<{id: string;title: string;lastUpdated: number;}> = [];
-        if (listRaw) {
-          try {list = JSON.parse(listRaw) || [];} catch {list = [];}
-        }
-        // upsert
-        const existingIdx = list.findIndex((s) => s.id === id);
-        if (existingIdx >= 0) {
-          list[existingIdx] = { id, title, lastUpdated };
+        // Email
+        const emailAnchor = ul.querySelector('a[href^="mailto:"]') as HTMLAnchorElement | null;
+        if (emailAnchor) {
+          obj.email = emailAnchor.textContent?.trim() || emailAnchor.href.replace(/^mailto:/, '');
         } else {
-          list.unshift({ id, title, lastUpdated });
+          const emailLi = li.find((n) => /email:/i.test(n.textContent || ''));
+          if (emailLi) obj.email = (emailLi.textContent || '').replace(/\s*Email:\s*/i, '').trim();
         }
-        // keep last 50
-        list = list.sort((a, b) => b.lastUpdated - a.lastUpdated).slice(0, 50);
-        localStorage.setItem('hesper_chat_sessions', JSON.stringify(list));
-        // notify sidebar
-        window.dispatchEvent(new CustomEvent('hesper:chat-sessions-updated'));
-      } catch {}
-    };
 
-    const buildHistory = (msgs: Message[]): Array<{role: string;content: string;}> => {
-      const pairs = msgs.
-      filter((m) => !m.isTyping && m.content).
-      map((m) => ({ role: m.type === 'user' ? 'user' : 'assistant', content: m.content }));
-      return pairs.slice(-6);
-    };
+        // LinkedIn
+        const linkedinAnchor = Array.from(ul.querySelectorAll('a')).find((a) => /linkedin\.com\//i.test(a.href)) as HTMLAnchorElement | undefined;
+        if (linkedinAnchor) {
+          obj.linkedin = linkedinAnchor.href;
+        } else {
+          const linkLi = li.find((n) => /linkedin:/i.test(n.textContent || ''));
+          if (linkLi) obj.linkedin = (linkLi.textContent || '').replace(/\s*LinkedIn:\s*/i, '').trim();
+        }
 
-    useEffect(() => {
-      if (!('SpeechRecognition' in window || 'webkitSpeechRecognition' in window)) {
-        return;
+        return obj;
+      }).filter((l) => l.name || l.email || l.linkedin);
+
+      return leads;
+    } catch {
+      return [];
+    }
+  };
+
+  const persistSession = (msgs: Message[]) => {
+    if (typeof window === 'undefined') return;
+    // Initialize session id on first persist
+    if (!sessionIdRef.current) {
+      sessionIdRef.current = `s_${Date.now()}`;
+    }
+    const id = sessionIdRef.current;
+    const titleSource = msgs.find((m) => m.type === 'user')?.content || "New chat";
+    const title = (titleSource || "New chat").slice(0, 60);
+    const lastUpdated = Date.now();
+
+    // Store compact messages for history open (role/content/timestamp)
+    const compact = msgs.map((m) => ({
+      role: m.type === 'user' ? 'user' : 'assistant',
+      content: m.content,
+      timestamp: m.timestamp instanceof Date ? m.timestamp.toISOString() : new Date().toISOString()
+    }));
+    try {
+      localStorage.setItem(`hesper_chat_session_${id}`, JSON.stringify({ id, title, lastUpdated, messages: compact }));
+      const listRaw = localStorage.getItem('hesper_chat_sessions');
+      let list: Array<{id: string;title: string;lastUpdated: number;}> = [];
+      if (listRaw) {
+        try {list = JSON.parse(listRaw) || [];} catch {list = [];}
       }
-
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      const recognition = new SpeechRecognition();
-      recognition.continuous = false;
-      recognition.interimResults = false;
-      recognition.lang = 'en-US';
-
-      recognition.onstart = () => {
-        setIsRecording(true);
-      };
-
-      recognition.onresult = (event: SpeechRecognitionEvent) => {
-        const transcript = event.results[0][0].transcript;
-        setInputValue(transcript);
-        inputRef.current?.focus();
-      };
-
-      recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
-        toast.error(`Microphone error: ${event.error}`);
-        setIsRecording(false);
-      };
-
-      recognition.onend = () => {
-        setIsRecording(false);
-      };
-
-      recognitionRef.current = recognition;
-    }, []);
-
-    const scrollToBottom = () => {
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-      setShowScrollButton(false);
-      setHasNewMessages(false);
-    };
-
-    useEffect(() => {
-      const el = scrollContainerRef.current;
-      if (!el) return;
-      const isNearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 120;
-      const increased = messages.length > prevCountRef.current;
-      if (isNearBottom) {
-        scrollToBottom();
+      // upsert
+      const existingIdx = list.findIndex((s) => s.id === id);
+      if (existingIdx >= 0) {
+        list[existingIdx] = { id, title, lastUpdated };
       } else {
-        setShowScrollButton(true);
-        if (increased) setHasNewMessages(true);
+        list.unshift({ id, title, lastUpdated });
       }
-      prevCountRef.current = messages.length;
-    }, [messages]);
+      // keep last 50
+      list = list.sort((a, b) => b.lastUpdated - a.lastUpdated).slice(0, 50);
+      localStorage.setItem('hesper_chat_sessions', JSON.stringify(list));
+      // notify sidebar
+      window.dispatchEvent(new CustomEvent('hesper:chat-sessions-updated'));
+    } catch {}
+  };
 
-    useEffect(() => {
+  const buildHistory = (msgs: Message[]): Array<{role: string;content: string;}> => {
+    const pairs = msgs.
+    filter((m) => !m.isTyping && m.content).
+    map((m) => ({ role: m.type === 'user' ? 'user' : 'assistant', content: m.content }));
+    return pairs.slice(-6);
+  };
+
+  useEffect(() => {
+    if (!('SpeechRecognition' in window || 'webkitSpeechRecognition' in window)) {
+      return;
+    }
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.lang = 'en-US';
+
+    recognition.onstart = () => {
+      setIsRecording(true);
+    };
+
+    recognition.onresult = (event: SpeechRecognitionEvent) => {
+      const transcript = event.results[0][0].transcript;
+      setInputValue(transcript);
       inputRef.current?.focus();
-
-      // Handle initial message with guard for StrictMode double-mounts
-      if (initialMessage && messages.length === 0 && !initialized) {
-        setInitialized(true);
-        handleInitialMessage(initialMessage);
-      }
-    }, [initialMessage]);
-
-    useEffect(() => {
-      const el = scrollContainerRef.current;
-      if (!el) return;
-      const onScroll = () => {
-        const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 60;
-        setShowScrollButton(!atBottom);
-        if (atBottom) setHasNewMessages(false);
-      };
-      el.addEventListener('scroll', onScroll, { passive: true });
-      return () => el.removeEventListener('scroll', onScroll);
-    }, []);
-
-    useEffect(() => {
-      if (currentSessionId && currentSessionId !== sessionIdRef.current && !sessionLoaded) {
-        loadSession(currentSessionId);
-      }
-    }, [currentSessionId]);
-
-    const loadSession = async (id: string) => {
-      try {
-        const sessionRaw = localStorage.getItem(`hesper_chat_session_${id}`);
-        if (sessionRaw) {
-          const session = JSON.parse(sessionRaw);
-          const messages: Message[] = session.messages.map((m: any) => ({
-            id: `loaded-${m.role}-${Date.now() + Math.random()}`,
-            type: m.role as 'user' | 'assistant',
-            content: m.content,
-            timestamp: new Date(m.timestamp),
-            modelName: selectedModel === 'hesper-pro' ? 'Hesper Pro' : 'Hesper'
-          })).filter((m) => m.content);
-          setMessages(messages);
-          sessionIdRef.current = id;
-          // Notify parent
-          onLoadSession?.(id);
-          setSessionLoaded(true);
-          // Trigger chat mode if in parent
-          window.dispatchEvent(new CustomEvent('hesper:load-session', { detail: { id } }));
-        }
-      } catch (error) {
-        console.error('Failed to load session:', error);
-      }
     };
 
-    const handleNewChat = () => {
-      setMessages([]);
-      setInputValue("");
-      sessionIdRef.current = null;
-      setSessionLoaded(false);
-      // Notify parent to clear session
-      window.dispatchEvent(new CustomEvent('hesper:new-chat'));
+    recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
+      toast.error(`Microphone error: ${event.error}`);
+      setIsRecording(false);
     };
 
-    useEffect(() => {
-      if (currentSessionId === null) {
-        handleNewChat();
+    recognition.onend = () => {
+      setIsRecording(false);
+    };
+
+    recognitionRef.current = recognition;
+  }, []);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    setShowScrollButton(false);
+    setHasNewMessages(false);
+  };
+
+  useEffect(() => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+    const isNearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 120;
+    const increased = messages.length > prevCountRef.current;
+    if (isNearBottom) {
+      scrollToBottom();
+    } else {
+      setShowScrollButton(true);
+      if (increased) setHasNewMessages(true);
+    }
+    prevCountRef.current = messages.length;
+  }, [messages]);
+
+  useEffect(() => {
+    inputRef.current?.focus();
+
+    // Handle initial message with guard for StrictMode double-mounts
+    if (initialMessage && messages.length === 0 && !initialized) {
+      setInitialized(true);
+      handleInitialMessage(initialMessage);
+    }
+  }, [initialMessage]);
+
+  useEffect(() => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+    const onScroll = () => {
+      const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 60;
+      setShowScrollButton(!atBottom);
+      if (atBottom) setHasNewMessages(false);
+    };
+    el.addEventListener('scroll', onScroll, { passive: true });
+    return () => el.removeEventListener('scroll', onScroll);
+  }, []);
+
+  useEffect(() => {
+    if (currentSessionId && currentSessionId !== sessionIdRef.current && !sessionLoaded) {
+      loadSession(currentSessionId);
+    }
+  }, [currentSessionId]);
+
+  const loadSession = async (id: string) => {
+    try {
+      const sessionRaw = localStorage.getItem(`hesper_chat_session_${id}`);
+      if (sessionRaw) {
+        const session = JSON.parse(sessionRaw);
+        const messages: Message[] = session.messages.map((m: any) => ({
+          id: `loaded-${m.role}-${Date.now() + Math.random()}`,
+          type: m.role as 'user' | 'assistant',
+          content: m.content,
+          timestamp: new Date(m.timestamp),
+          modelName: selectedModel === 'hesper-pro' ? 'Hesper Pro' : 'Hesper'
+        })).filter((m) => m.content);
+        setMessages(messages);
+        sessionIdRef.current = id;
+        // Notify parent
+        onLoadSession?.(id);
+        setSessionLoaded(true);
+        // Trigger chat mode if in parent
+        window.dispatchEvent(new CustomEvent('hesper:load-session', { detail: { id } }));
       }
-    }, [currentSessionId]);
+    } catch (error) {
+      console.error('Failed to load session:', error);
+    }
+  };
 
-    const handleInitialMessage = async (message: string) => {
-      if (inFlightRef.current) return; // prevent concurrent initial sends
-      inFlightRef.current = true;
-      const currentModelName = selectedModel === 'hesper-pro' ? "Hesper Pro" : "Hesper";
-      const userMessage: Message = {
-        id: `user-${Date.now()}`,
-        type: 'user',
-        content: message,
-        timestamp: new Date()
-      };
+  const handleNewChat = () => {
+    setMessages([]);
+    setInputValue("");
+    sessionIdRef.current = null;
+    setSessionLoaded(false);
+    // Notify parent to clear session
+    window.dispatchEvent(new CustomEvent('hesper:new-chat'));
+  };
 
-      setMessages([userMessage]);
-      setIsLoading(true);
-      setIsTyping(true);
+  useEffect(() => {
+    if (currentSessionId === null) {
+      handleNewChat();
+    }
+  }, [currentSessionId]);
 
-      // Add typing indicator
-      const typingMessage: Message = {
-        id: `typing-${Date.now()}`,
+  const handleInitialMessage = async (message: string) => {
+    if (inFlightRef.current) return; // prevent concurrent initial sends
+    inFlightRef.current = true;
+    const currentModelName = selectedModel === 'hesper-pro' ? "Hesper Pro" : "Hesper";
+    const userMessage: Message = {
+      id: `user-${Date.now()}`,
+      type: 'user',
+      content: message,
+      timestamp: new Date()
+    };
+
+    setMessages([userMessage]);
+    setIsLoading(true);
+    setIsTyping(true);
+
+    // Add typing indicator
+    const typingMessage: Message = {
+      id: `typing-${Date.now()}`,
+      type: 'assistant',
+      content: "",
+      timestamp: new Date(),
+      isTyping: true,
+      modelName: currentModelName
+    };
+    setMessages((prev) => [...prev, typingMessage]);
+
+    try {
+      const history = buildHistory([userMessage]);
+      const reply = await fetchN8nReply(message, selectedModel, history);
+
+      // Remove typing indicator and add response (with dedupe)
+      const assistantMessage: Message = {
+        id: `assistant-${Date.now()}`,
         type: 'assistant',
-        content: "",
+        content: reply || "",
         timestamp: new Date(),
-        isTyping: true,
         modelName: currentModelName
-      };
-      setMessages((prev) => [...prev, typingMessage]);
-
-      try {
-        const history = buildHistory([userMessage]);
-        const reply = await fetchN8nReply(message, selectedModel, history);
-
-        // Remove typing indicator and add response (with dedupe)
-        const assistantMessage: Message = {
-          id: `assistant-${Date.now()}`,
-          type: 'assistant',
-          content: reply || "",
-          timestamp: new Date(),
-          modelName: currentModelName
-        };
-
-        setMessages((prev) => {
-          const withoutTyping = prev.filter((m) => !m.isTyping);
-          const lastAssistant = [...withoutTyping].reverse().find((m) => m.type === 'assistant');
-          const next = lastAssistant && lastAssistant.content.trim() === (reply || "").trim() ? withoutTyping : [...withoutTyping, assistantMessage];
-          // persist
-          persistSession(next);
-          return next;
-        });
-      } catch (error) {
-        setMessages([userMessage]);
-        toast.error("Failed to get response. Please try again.");
-        // persist even failed user start
-        persistSession([userMessage]);
-      } finally {
-        setIsLoading(false);
-        setIsTyping(false);
-        inFlightRef.current = false;
-      }
-    };
-
-    const handleSend = async (content: string) => {
-      if (!content.trim() || isLoading) return;
-      if (sendingRef.current) return; // prevent rapid double-send
-      if (inFlightRef.current) return; // prevent concurrent sends
-      sendingRef.current = true;
-      inFlightRef.current = true;
-      const currentModelName = selectedModel === 'hesper-pro' ? 'Hesper Pro' : 'Hesper';
-
-      const userMessage: Message = {
-        id: `user-${Date.now()}`,
-        type: 'user',
-        content: content.trim(),
-        timestamp: new Date()
       };
 
       setMessages((prev) => {
-        const next = [...prev, userMessage];
+        const withoutTyping = prev.filter((m) => !m.isTyping);
+        const lastAssistant = [...withoutTyping].reverse().find((m) => m.type === 'assistant');
+        const next = lastAssistant && lastAssistant.content.trim() === (reply || "").trim() ? withoutTyping : [...withoutTyping, assistantMessage];
+        // persist
         persistSession(next);
         return next;
       });
-      setInputValue("");
-      setIsLoading(true);
-      setIsTyping(true);
+    } catch (error) {
+      setMessages([userMessage]);
+      toast.error("Failed to get response. Please try again.");
+      // persist even failed user start
+      persistSession([userMessage]);
+    } finally {
+      setIsLoading(false);
+      setIsTyping(false);
+      inFlightRef.current = false;
+    }
+  };
 
-      // Add typing indicator
-      const typingMessage: Message = {
-        id: `typing-${Date.now()}`,
+  const handleSend = async (content: string) => {
+    if (!content.trim() || isLoading) return;
+    if (sendingRef.current) return; // prevent rapid double-send
+    if (inFlightRef.current) return; // prevent concurrent sends
+    sendingRef.current = true;
+    inFlightRef.current = true;
+    const currentModelName = selectedModel === 'hesper-pro' ? 'Hesper Pro' : 'Hesper';
+
+    const userMessage: Message = {
+      id: `user-${Date.now()}`,
+      type: 'user',
+      content: content.trim(),
+      timestamp: new Date()
+    };
+
+    setMessages((prev) => {
+      const next = [...prev, userMessage];
+      persistSession(next);
+      return next;
+    });
+    setInputValue("");
+    setIsLoading(true);
+    setIsTyping(true);
+
+    // Add typing indicator
+    const typingMessage: Message = {
+      id: `typing-${Date.now()}`,
+      type: 'assistant',
+      content: "",
+      timestamp: new Date(),
+      isTyping: true,
+      modelName: currentModelName
+    };
+    setMessages((prev) => [...prev, typingMessage]);
+
+    try {
+      const history = buildHistory([...messages, userMessage]);
+      const reply = await fetchN8nReply(userMessage.content, selectedModel, history);
+
+      // Remove typing indicator and add response (with dedupe)
+      const assistantMessage: Message = {
+        id: `assistant-${Date.now()}`,
         type: 'assistant',
-        content: "",
+        content: reply || "",
         timestamp: new Date(),
-        isTyping: true,
         modelName: currentModelName
       };
-      setMessages((prev) => [...prev, typingMessage]);
 
-      try {
-        const history = buildHistory([...messages, userMessage]);
-        const reply = await fetchN8nReply(userMessage.content, selectedModel, history);
+      setMessages((prev) => {
+        const withoutTyping = prev.filter((m) => !m.isTyping);
+        const lastAssistant = [...withoutTyping].reverse().find((m) => m.type === 'assistant');
+        const next = lastAssistant && lastAssistant.content.trim() === (reply || "").trim() ? withoutTyping : [...withoutTyping, assistantMessage];
+        persistSession(next);
+        return next;
+      });
+    } catch (error) {
+      // Remove typing indicator
+      setMessages((prev) => {
+        const next = prev.filter((m) => !m.isTyping);
+        persistSession(next);
+        return next;
+      });
+      toast.error("Failed to get response. Please try again.");
+    } finally {
+      setIsLoading(false);
+      setIsTyping(false);
+      sendingRef.current = false;
+      inFlightRef.current = false;
+    }
+  };
 
-        // Remove typing indicator and add response (with dedupe)
-        const assistantMessage: Message = {
-          id: `assistant-${Date.now()}`,
-          type: 'assistant',
-          content: reply || "",
-          timestamp: new Date(),
-          modelName: currentModelName
-        };
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    handleSend(inputValue);
+  };
 
-        setMessages((prev) => {
-          const withoutTyping = prev.filter((m) => !m.isTyping);
-          const lastAssistant = [...withoutTyping].reverse().find((m) => m.type === 'assistant');
-          const next = lastAssistant && lastAssistant.content.trim() === (reply || "").trim() ? withoutTyping : [...withoutTyping, assistantMessage];
-          persistSession(next);
-          return next;
-        });
-      } catch (error) {
-        // Remove typing indicator
-        setMessages((prev) => {
-          const next = prev.filter((m) => !m.isTyping);
-          persistSession(next);
-          return next;
-        });
-        toast.error("Failed to get response. Please try again.");
-      } finally {
-        setIsLoading(false);
-        setIsTyping(false);
-        sendingRef.current = false;
-        inFlightRef.current = false;
-      }
-    };
-
-    const handleSubmit = async (e: React.FormEvent) => {
-      e.preventDefault();
-      handleSend(inputValue);
-    };
-
-    const generateModelResponse = (userInput: string, model: string): string => {
-      if (model === 'hesper-pro') {
-        return `*Analyzing your request...*
+  const generateModelResponse = (userInput: string, model: string): string => {
+    if (model === 'hesper-pro') {
+      return `*Analyzing your request...*
 
 I understand you're asking about "${userInput}". Let me think through this systematically:
 
@@ -469,214 +454,202 @@ I understand you're asking about "${userInput}". Let me think through this syste
 This is a thoughtful response from Hesper Pro. I've taken time to research and reason through your query to provide you with the most accurate and helpful information possible. The Pro model allows me to dive deeper into complex topics and provide more nuanced, well-researched answers.
 
 Would you like me to explore any specific aspect of this topic in more detail?`;
-      } else {
-        return `Thanks for your message! This is a quick response from Hesper. I'm designed to provide fast, helpful responses to your everyday questions and tasks.
+    } else {
+      return `Thanks for your message! This is a quick response from Hesper. I'm designed to provide fast, helpful responses to your everyday questions and tasks.
 
 Your input: "${userInput}"
 
 I'm here to help with a wide range of tasks including answering questions, helping with writing, providing explanations, and assisting with various everyday needs. Feel free to ask me anything!`;
-      }
-    };
+    }
+  };
 
-    const handleCopy = async (content: string) => {
-      try {
-        await navigator.clipboard.writeText(content);
-        toast.success("Copied to clipboard");
-      } catch (error) {
-        toast.error("Failed to copy");
-      }
-    };
+  const handleCopy = async (content: string) => {
+    try {
+      await navigator.clipboard.writeText(content);
+      toast.success("Copied to clipboard");
+    } catch (error) {
+      toast.error("Failed to copy");
+    }
+  };
 
-    const handleRegenerate = () => {
-      if (messages.length < 2) return;
+  const handleRegenerate = () => {
+    if (messages.length < 2) return;
 
-      const lastUserMessage = [...messages].reverse().find((m) => m.type === 'user');
-      if (lastUserMessage) {
-        // Remove last assistant response and regenerate
-        setMessages((prev) => prev.filter((m) => m.id !== messages[messages.length - 1].id));
-        setInputValue(lastUserMessage.content);
-        handleSubmit(new Event('submit') as any);
-      }
-    };
+    const lastUserMessage = [...messages].reverse().find((m) => m.type === 'user');
+    if (lastUserMessage) {
+      // Remove last assistant response and regenerate
+      setMessages((prev) => prev.filter((m) => m.id !== messages[messages.length - 1].id));
+      setInputValue(lastUserMessage.content);
+      handleSubmit(new Event('submit') as any);
+    }
+  };
 
-    const handleMicClick = () => {
-      if (!recognitionRef.current || isLoading) return;
+  const handleMicClick = () => {
+    if (!recognitionRef.current || isLoading) return;
 
-      if (isRecording) {
-        recognitionRef.current.stop();
-      } else {
-        recognitionRef.current.start();
-      }
-    };
+    if (isRecording) {
+      recognitionRef.current.stop();
+    } else {
+      recognitionRef.current.start();
+    }
+  };
 
-    const getModelInfo = () => {
-      if (selectedModel === 'hesper-pro') {
-        return {
-          icon: <Brain className="h-4 w-4" />,
-          name: "Hesper Pro", // new display name going forward
-          description: "Advanced reasoning model"
-        };
-      } else {
-        return {
-          icon: <Zap className="h-4 w-4" />,
-          name: "Hesper", // changed from "Hesper Core"
-          description: "Fast general AI model"
-        };
-      }
-    };
+  const getModelInfo = () => {
+    if (selectedModel === 'hesper-pro') {
+      return {
+        icon: <Brain className="h-4 w-4" />,
+        name: "Hesper Pro", // new display name going forward
+        description: "Advanced reasoning model"
+      };
+    } else {
+      return {
+        icon: <Zap className="h-4 w-4" />,
+        name: "Hesper", // changed from "Hesper Core"
+        description: "Fast general AI model"
+      };
+    }
+  };
 
-    const modelInfo = getModelInfo();
+  const modelInfo = getModelInfo();
 
-    // Typing timer upgraded to mm:ss:ms with rAF and a subtle shape-morph icon
-    const TypingTimer: React.FC = () => {
-      const [elapsedMs, setElapsedMs] = useState(0);
-      useEffect(() => {
-        let raf = 0;
-        const start = performance.now();
-        const tick = () => {
-          setElapsedMs(performance.now() - start);
-          raf = requestAnimationFrame(tick);
-        };
+  // Typing timer upgraded to mm:ss:ms with rAF and a subtle shape-morph icon
+  const TypingTimer: React.FC = () => {
+    const [elapsedMs, setElapsedMs] = useState(0);
+    useEffect(() => {
+      let raf = 0;
+      const start = performance.now();
+      const tick = () => {
+        setElapsedMs(performance.now() - start);
         raf = requestAnimationFrame(tick);
-        return () => cancelAnimationFrame(raf);
-      }, []);
-
-      return (
-        <div className="inline-flex items-center gap-2 text-xs text-muted-foreground" role="status" aria-live="polite">
-          <span className="relative inline-flex items-center justify-center">
-            <span
-              className="w-3.5 h-3.5 sm:w-4 sm:h-4 bg-[linear-gradient(135deg,var(--color-primary),var(--color-chart-5))] shadow-[0_0_8px_rgba(26,115,232,0.35)] [animation:var(--animate-shape-morph)]"
-              aria-hidden />
-
-          </span>
-          <span className="inline-flex items-center gap-1">
-            <span className="sr-only">Assistant is typing</span>
-            <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/70 animate-bounce" />
-            <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/70 animate-bounce" style={{ animationDelay: '0.15s' }} />
-            <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/70 animate-bounce" style={{ animationDelay: '0.3s' }} />
-          </span>
-        </div>);
-
-    };
-
-    // 20-minute waiting timeline shown while awaiting webhook response
-    const WaitTimeline: React.FC<{active: boolean;}> = ({ active }) => {
-      const DURATION = 20 * 60 * 1000; // 20 minutes
-      const [elapsed, setElapsed] = useState(0);
-
-      useEffect(() => {
-        if (!active) return;
-        let raf = 0;
-        const start = performance.now();
-        const tick = () => {
-          setElapsed((prev) => {
-            const now = performance.now();
-            const next = now - start;
-            return Math.min(next, DURATION);
-          });
-          raf = requestAnimationFrame(tick);
-        };
-        raf = requestAnimationFrame(tick);
-        return () => cancelAnimationFrame(raf);
-      }, [active]);
-
-      if (!active) return null;
-
-      const remaining = Math.max(0, DURATION - elapsed);
-      const mm = String(Math.floor(remaining / 60000)).padStart(2, "0");
-      const ss = String(Math.floor(remaining % 60000 / 1000)).padStart(2, "0");
-
-      const pct = Math.min(100, elapsed / DURATION * 100);
-
-      return (
-        <div className="px-2 sm:px-4 py-2">
-          <div className="rounded-full h-1.5 bg-secondary/80 overflow-hidden">
-            <div
-              className="h-full bg-[linear-gradient(90deg,var(--color-primary),var(--color-chart-1),var(--color-chart-5))] [animation:var(--animate-timeline-shimmer)]"
-              style={{ width: `${pct}%` }} />
-
-          </div>
-          <div className="mt-1.5 flex items-center justify-between text-[10px] sm:text-xs text-muted-foreground font-mono">
-            <span>waiting for webhook…</span>
-            <span>{mm}:{ss} remaining</span>
-          </div>
-        </div>);
-
-    };
-
-    // Expose imperative handle for voice sending
-    useImperativeHandle(ref, () => ({
-      sendVoiceMessage: async (transcript: string) => {
-        if (!transcript.trim() || isLoading) return false;
-        if (sendingRef.current || inFlightRef.current) return false;
-
-        onVoiceInput?.(transcript); // Optional callback
-        await handleSend(transcript); // Reuse existing send logic
-        return true;
-      }
-    }), [isLoading, handleSend, onVoiceInput]);
+      };
+      raf = requestAnimationFrame(tick);
+      return () => cancelAnimationFrame(raf);
+    }, []);
 
     return (
-      <div className="relative flex flex-col min-h-[100dvh] w-full max-w-4xl mx-auto px-0 sm:px-4">
-        {/* Header */}
-        <div className="flex items-center justify-between p-2 border-b border-border bg-card">
-          <button
-            onClick={onBack}
-            className="text-xs sm:text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1 min-h-[36px]">
+      <div className="inline-flex items-center gap-2 text-xs text-muted-foreground" role="status" aria-live="polite">
+        <span className="relative inline-flex items-center justify-center">
+          <span
+            className="w-3.5 h-3.5 sm:w-4 sm:h-4 bg-[linear-gradient(135deg,var(--color-primary),var(--color-chart-5))] shadow-[0_0_8px_rgba(26,115,232,0.35)] [animation:var(--animate-shape-morph)]"
+            aria-hidden />
 
-            <ChevronLeft className="h-4 w-4" />
-            Back to homepage
-          </button>
-          
-          <div className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm hidden sm:flex">
-            {modelInfo.icon}
-            <span className="font-medium truncate">{modelInfo.name}</span>
-            <span className="text-muted-foreground">•</span>
-            <span className="text-muted-foreground truncate">{modelInfo.description}</span>
-          </div>
+        </span>
+        <span className="inline-flex items-center gap-1">
+          <span className="sr-only">Assistant is typing</span>
+          <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/70 animate-bounce" />
+          <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/70 animate-bounce" style={{ animationDelay: '0.15s' }} />
+          <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/70 animate-bounce" style={{ animationDelay: '0.3s' }} />
+        </span>
+      </div>);
+
+  };
+
+  // 20-minute waiting timeline shown while awaiting webhook response
+  const WaitTimeline: React.FC<{active: boolean;}> = ({ active }) => {
+    const DURATION = 20 * 60 * 1000; // 20 minutes
+    const [elapsed, setElapsed] = useState(0);
+
+    useEffect(() => {
+      if (!active) return;
+      let raf = 0;
+      const start = performance.now();
+      const tick = () => {
+        setElapsed((prev) => {
+          const now = performance.now();
+          const next = now - start;
+          return Math.min(next, DURATION);
+        });
+        raf = requestAnimationFrame(tick);
+      };
+      raf = requestAnimationFrame(tick);
+      return () => cancelAnimationFrame(raf);
+    }, [active]);
+
+    if (!active) return null;
+
+    const remaining = Math.max(0, DURATION - elapsed);
+    const mm = String(Math.floor(remaining / 60000)).padStart(2, "0");
+    const ss = String(Math.floor(remaining % 60000 / 1000)).padStart(2, "0");
+
+    const pct = Math.min(100, elapsed / DURATION * 100);
+
+    return (
+      <div className="px-2 sm:px-4 py-2">
+        <div className="rounded-full h-1.5 bg-secondary/80 overflow-hidden">
+          <div
+            className="h-full bg-[linear-gradient(90deg,var(--color-primary),var(--color-chart-1),var(--color-chart-5))] [animation:var(--animate-timeline-shimmer)]"
+            style={{ width: `${pct}%` }} />
+
         </div>
-
-        {/* SMTP setup note */}
-        <div className="px-3 py-2 text-[11px] sm:text-xs bg-[#FFF3CD] text-[#8A6D3B] border-b border-border">
-          ⚠️ Please setup your SMTP in Settings so the AI Agent can send emails.
+        <div className="mt-1.5 flex items-center justify-between text-[10px] sm:text-xs text-muted-foreground font-mono">
+          <span>waiting for webhook…</span>
+          <span>{mm}:{ss} remaining</span>
         </div>
+      </div>);
 
-        {/* 20-min timeline while waiting */}
-        {/* <WaitTimeline active={isTyping || isLoading} /> */}
+  };
 
-        {/* Messages Area */}
-        <div
-          ref={scrollContainerRef}
-          className="flex-1 overflow-y-auto p-2 pb-1 scroll-smooth scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent"
-          role="log"
-          aria-live="polite">
-          
-          {messages.length === 0 &&
-          <div className="text-center py-12">
-              <div className="mb-4 mx-auto w-8">
-                {modelInfo.icon}
-              </div>
-              <h3 className="text-lg font-medium mb-2">Start a conversation</h3>
-              <p className="text-muted-foreground text-sm max-w-md mx-auto">
-                Ask me anything! I'm here to help with questions, tasks, and creative projects.
-              </p>
+  return (
+    <div className="relative flex flex-col min-h-[100dvh] w-full max-w-4xl mx-auto px-0 sm:px-4">
+      {/* Header */}
+      <div className="flex items-center justify-between p-2 border-b border-border bg-card">
+        <button
+          onClick={onBack}
+          className="text-xs sm:text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1 min-h-[36px]">
+
+          <ChevronLeft className="h-4 w-4" />
+          Back to homepage
+        </button>
+        
+        <div className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm hidden sm:flex">
+          {modelInfo.icon}
+          <span className="font-medium truncate">{modelInfo.name}</span>
+          <span className="text-muted-foreground">•</span>
+          <span className="text-muted-foreground truncate">{modelInfo.description}</span>
+        </div>
+      </div>
+
+      {/* SMTP setup note */}
+      <div className="px-3 py-2 text-[11px] sm:text-xs bg-[#FFF3CD] text-[#8A6D3B] border-b border-border">
+        ⚠️ Please setup your SMTP in Settings so the AI Agent can send emails.
+      </div>
+
+      {/* 20-min timeline while waiting */}
+      {/* <WaitTimeline active={isTyping || isLoading} /> */}
+
+      {/* Messages Area */}
+      <div
+        ref={scrollContainerRef}
+        className="flex-1 overflow-y-auto p-2 pb-1 scroll-smooth scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent"
+        role="log"
+        aria-live="polite">
+        
+        {messages.length === 0 &&
+        <div className="text-center py-12">
+            <div className="mb-4 mx-auto w-8">
+              {modelInfo.icon}
             </div>
-          }
+            <h3 className="text-lg font-medium mb-2">Start a conversation</h3>
+            <p className="text-muted-foreground text-sm max-w-md mx-auto">
+              Ask me anything! I'm here to help with questions, tasks, and creative projects.
+            </p>
+          </div>
+        }
 
-          {messages.map((message, idx) =>
-          <div key={message.id} className="w-full">
-              {idx > 0 && <div className="h-px bg-border my-3 sm:my-4" />}
-              {message.type === 'assistant' &&
-            <div className="flex items-center gap-1 sm:gap-2 mb-2">
-                  {modelInfo.icon}
-                  <span className="text-xs sm:text-sm font-medium text-muted-foreground !w-20 !h-full !whitespace-pre-line">{message.modelName ?? modelInfo.name}</span>
-                </div>
-            }
-              <div className="pb-1 sm:pb-0">
-                {message.isTyping ?
+        {messages.map((message, idx) =>
+        <div key={message.id} className="w-full">
+            {idx > 0 && <div className="h-px bg-border my-3 sm:my-4" />}
+            {message.type === 'assistant' &&
+          <div className="flex items-center gap-1 sm:gap-2 mb-2">
+                {modelInfo.icon}
+                <span className="text-xs sm:text-sm font-medium text-muted-foreground !w-20 !h-full !whitespace-pre-line">{message.modelName ?? modelInfo.name}</span>
+              </div>
+          }
+            <div className="pb-1 sm:pb-0">
+              {message.isTyping ?
             <div className="flex items-center gap-2" role="status" aria-live="polite">
-                <TypingTimer />
-              </div> :
+                  <TypingTimer />
+                </div> :
 
             (() => {
               const leads = message.type === 'assistant' ? parseLeadsFromHtml(message.content) : [];
@@ -890,9 +863,4 @@ I'm here to help with a wide range of tasks including answering questions, helpi
       </div>
     </div>);
 
-  }
-);
-
-ChatInterface.displayName = 'ChatInterface';
-
-export default ChatInterface;
+}
