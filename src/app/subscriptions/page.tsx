@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Loader2 } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 interface Subscription {
   plan: "free" | "basic" | "pro";
@@ -347,6 +348,67 @@ export default function SubscriptionsPage() {
             or contact support.
           </p>
         </div>
+
+        {/* Credits Details Table */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-xl">Credits & Usage Details</CardTitle>
+            <CardDescription>Understand what you get, credit costs, and how to purchase more.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Plan</TableHead>
+                    <TableHead>What You Get</TableHead>
+                    <TableHead>Credit Cost</TableHead>
+                    <TableHead>Daily Limits</TableHead>
+                    <TableHead>How to Buy Extra Credits</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  <TableRow>
+                    <TableCell><Badge variant="secondary">Free</Badge></TableCell>
+                    <TableCell>Limited access to basic features</TableCell>
+                    <TableCell>1 credit per message</TableCell>
+                    <TableCell>None</TableCell>
+                    <TableCell>
+                      <Link href="/checkout" className="text-primary hover:underline">
+                        Buy credits via PayPal
+                      </Link>
+                    </TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell><Badge>Basic</Badge></TableCell>
+                    <TableCell>100 credits/month, basic model access</TableCell>
+                    <TableCell>1 credit per message</TableCell>
+                    <TableCell>None</TableCell>
+                    <TableCell>
+                      <Link href="/checkout" className="text-primary hover:underline">
+                        Buy extra credits via PayPal
+                      </Link>
+                    </TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell><Badge>Pro</Badge></TableCell>
+                    <TableCell>200 credits/month, advanced features, 50 messages/day</TableCell>
+                    <TableCell>1 credit per message</TableCell>
+                    <TableCell>50 messages/day (resets at midnight)</TableCell>
+                    <TableCell>
+                      <Link href="/checkout" className="text-primary hover:underline">
+                        Buy extra credits via PayPal
+                      </Link>
+                    </TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </div>
+            <p className="text-sm text-muted-foreground mt-4">
+              Credits are deducted per message sent. Unused monthly credits do not roll over. Extra credits can be purchased at any time through the checkout page.
+            </p>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
