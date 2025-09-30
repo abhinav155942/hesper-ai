@@ -16,6 +16,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const message = body?.message ?? body?.prompt ?? body?.text ?? body?.query ?? "";
     const model = body?.model ?? "";
+    const chatHistoryIn = Array.isArray(body?.chat_history) ? body.chat_history : [];
 
     if (!message) {
       return Response.json({ error: "No message provided" }, { status: 400 });
@@ -55,9 +56,45 @@ export async function POST(req: NextRequest) {
         }
       } catch {}
 
+      // Ensure every expected settings key is present (null when not configured)
+      const defaultSettings = {
+        business_intro: null,
+        pros: null as string[] | null,
+        differences: null as string[] | null,
+        email_format: null,
+        smtp: {
+          host: null as string | null,
+          port: null as number | null,
+          username: null as string | null,
+          password: null as string | null,
+          client_hostname: null as string | null,
+          ssl_tls_enabled: null as boolean | null,
+        },
+        email_tone: null,
+        email_description: null,
+        email_signature: null,
+        subject_templates: null as string[] | null,
+        user_name: null,
+        business_description: null,
+      };
+
+      const fullSettings = {
+        ...defaultSettings,
+        ...(settings || {}),
+        smtp: { ...defaultSettings.smtp, ...(settings?.smtp || {}) },
+      };
+
+      // Normalize chat history to last 6 messages (user + assistant roles)
+      const chat_history = chatHistoryIn
+        .filter((m: any) => m && typeof m.content === "string" && (m.role === "user" || m.role === "assistant"))
+        .slice(-6);
+
       const payload = {
-        ...settings,
-        user_message: message
+        user_id: userId,
+        model: model || null,
+        user_message: message,
+        chat_history,
+        settings: fullSettings,
       };
 
       // Send as JSON to n8n
