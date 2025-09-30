@@ -93,7 +93,7 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen, isMobile, onNewCh
   const navigationLinks = [
     { icon: Info, label: "About Hesper", href: "/about-hesper" },
     { icon: Smartphone, label: "Hesper App", href: "#" },
-    { icon: CreditCard, label: "Subscriptions", href: "#" },
+    { icon: CreditCard, label: "Subscriptions", href: "/subscriptions" },
     { icon: Building, label: "For Business", href: "#" },
     { icon: CreditCard, label: "Checkout", href: "/checkout" },
   ];
