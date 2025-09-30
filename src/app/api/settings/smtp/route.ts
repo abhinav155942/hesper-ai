@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Query SMTP settings with all columns, pagination, and ordering - use user.id as string directly
+    // Query SMTP settings with all columns, pagination, and ordering
     const smtpRecords = await db.select({
       id: smtpSettings.id,
       user_id: smtpSettings.userId,
@@ -44,6 +44,10 @@ export async function GET(request: NextRequest) {
       smtp_port: smtpSettings.smtpPort,
       client_hostname: smtpSettings.clientHostname,
       ssl_tls_enabled: smtpSettings.sslTlsEnabled,
+      sendgrid_api_key: smtpSettings.sendgridApiKey,
+      sendgrid_domain_email: smtpSettings.sendgridDomainEmail,
+      mailgun_api_key: smtpSettings.mailgunApiKey,
+      mailgun_domain_email: smtpSettings.mailgunDomainEmail,
       created_at: smtpSettings.createdAt,
       updated_at: smtpSettings.updatedAt
     })
@@ -87,7 +91,11 @@ export async function PATCH(request: NextRequest) {
       smtp_host,
       smtp_port,
       client_hostname,
-      ssl_tls_enabled
+      ssl_tls_enabled,
+      sendgrid_api_key,
+      sendgrid_domain_email,
+      mailgun_api_key,
+      mailgun_domain_email
     } = requestBody;
 
     // Validate smtp_port is integer if provided
@@ -106,7 +114,7 @@ export async function PATCH(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Check if record exists for this user - use user.id as string directly
+    // Check if record exists for this user
     const existingRecord = await db.select()
       .from(smtpSettings)
       .where(eq(smtpSettings.userId, user.id))
@@ -144,17 +152,33 @@ export async function PATCH(request: NextRequest) {
       updateData.sslTlsEnabled = ssl_tls_enabled;
       changedFields.ssl_tls_enabled = ssl_tls_enabled;
     }
+    if (sendgrid_api_key !== undefined) {
+      updateData.sendgridApiKey = sendgrid_api_key;
+      changedFields.sendgrid_api_key = sendgrid_api_key;
+    }
+    if (sendgrid_domain_email !== undefined) {
+      updateData.sendgridDomainEmail = sendgrid_domain_email;
+      changedFields.sendgrid_domain_email = sendgrid_domain_email;
+    }
+    if (mailgun_api_key !== undefined) {
+      updateData.mailgunApiKey = mailgun_api_key;
+      changedFields.mailgun_api_key = mailgun_api_key;
+    }
+    if (mailgun_domain_email !== undefined) {
+      updateData.mailgunDomainEmail = mailgun_domain_email;
+      changedFields.mailgun_domain_email = mailgun_domain_email;
+    }
 
     let result;
 
     if (existingRecord.length > 0) {
-      // Update existing record - use user.id as string directly
+      // Update existing record
       result = await db.update(smtpSettings)
         .set(updateData)
         .where(eq(smtpSettings.userId, user.id))
         .returning();
     } else {
-      // Insert new record - use user.id as string directly
+      // Insert new record
       const insertData = {
         userId: user.id,
         smtpUsername: smtp_username || null,
@@ -163,6 +187,10 @@ export async function PATCH(request: NextRequest) {
         smtpPort: smtp_port || null,
         clientHostname: client_hostname || null,
         sslTlsEnabled: ssl_tls_enabled !== undefined ? ssl_tls_enabled : false,
+        sendgridApiKey: sendgrid_api_key || null,
+        sendgridDomainEmail: sendgrid_domain_email || null,
+        mailgunApiKey: mailgun_api_key || null,
+        mailgunDomainEmail: mailgun_domain_email || null,
         createdAt: new Date(),
         updatedAt: new Date()
       };
@@ -187,6 +215,37 @@ export async function PATCH(request: NextRequest) {
       } catch (webhookError) {
         console.error(`Webhook error for field ${fieldName}:`, webhookError);
         // Continue processing other webhooks even if one fails
+      }
+    }
+
+    // Send full email configs snapshot when any email config changes
+    if (Object.keys(changedFields).length > 0) {
+      try {
+        const updatedRecord = result[0];
+        const emailConfigsSnapshot = {
+          email_configs: {
+            smtp_username: updatedRecord.smtpUsername || null,
+            smtp_password: updatedRecord.smtpPassword || null,
+            smtp_host: updatedRecord.smtpHost || null,
+            smtp_port: updatedRecord.smtpPort || null,
+            client_hostname: updatedRecord.clientHostname || null,
+            ssl_tls_enabled: updatedRecord.sslTlsEnabled || false,
+            sendgrid_api_key: updatedRecord.sendgridApiKey || null,
+            sendgrid_domain_email: updatedRecord.sendgridDomainEmail || null,
+            mailgun_api_key: updatedRecord.mailgunApiKey || null,
+            mailgun_domain_email: updatedRecord.mailgunDomainEmail || null
+          }
+        };
+
+        await fetch(webhookUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(emailConfigsSnapshot)
+        });
+      } catch (snapshotWebhookError) {
+        console.error('Email configs snapshot webhook error:', snapshotWebhookError);
       }
     }
 

@@ -5,29 +5,30 @@ import {
   emailFormatSettings, 
   businessIntro, 
   businessPros, 
-  businessDifferences 
+  businessDifferences,
+  user
 } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { getCurrentUser } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
   try {
-    const user = await getCurrentUser(request);
-    if (!user) {
+    const currentUser = await getCurrentUser(request);
+    if (!currentUser) {
       return NextResponse.json({ 
         error: 'Authentication required' 
       }, { status: 401 });
     }
 
     // Add validation for user.id
-    if (!user.id || typeof user.id !== 'string') {
-      console.error('Invalid user ID:', user.id);
+    if (!currentUser.id || typeof currentUser.id !== 'string') {
+      console.error('Invalid user ID:', currentUser.id);
       return NextResponse.json({ 
         error: 'Invalid authentication' 
       }, { status: 401 });
     }
 
-    const userId = user.id;
+    const userId = currentUser.id;
 
     // Query all settings tables concurrently for the authenticated user
     const [
@@ -35,7 +36,8 @@ export async function GET(request: NextRequest) {
       emailFormatResult,
       businessIntroResult,
       businessProsResult,
-      businessDifferencesResult
+      businessDifferencesResult,
+      userResult
     ] = await Promise.all([
       // SMTP Settings
       db.select({
@@ -45,6 +47,10 @@ export async function GET(request: NextRequest) {
         smtp_port: smtpSettings.smtpPort,
         client_hostname: smtpSettings.clientHostname,
         ssl_tls_enabled: smtpSettings.sslTlsEnabled,
+        sendgrid_api_key: smtpSettings.sendgridApiKey,
+        sendgrid_domain_email: smtpSettings.sendgridDomainEmail,
+        mailgun_api_key: smtpSettings.mailgunApiKey,
+        mailgun_domain_email: smtpSettings.mailgunDomainEmail,
       })
         .from(smtpSettings)
         .where(eq(smtpSettings.userId, userId))
@@ -86,22 +92,39 @@ export async function GET(request: NextRequest) {
         value: businessDifferences.value
       })
         .from(businessDifferences)
-        .where(eq(businessDifferences.userId, userId))
+        .where(eq(businessDifferences.userId, userId)),
+
+      // User email provider settings
+      db.select({
+        sendgrid_api_key: user.sendgridApiKey,
+        sendgrid_domain: user.sendgridDomain, 
+        mailgun_api_key: user.mailgunApiKey,
+        mailgun_domain: user.mailgunDomain,
+        email_provider: user.emailProvider
+      })
+        .from(user)
+        .where(eq(user.id, userId))
+        .limit(1)
     ]);
 
     // Flatten the response to match frontend expectations
     const smtpData = smtpResult[0] || {};
     const emailData = emailFormatResult[0] || {};
     const businessData = businessIntroResult[0] || {};
+    const userData = userResult[0] || {};
 
     const response = {
       // SMTP fields
       smtp_username: smtpData.smtp_username || null,
-      smtp_password: smtpData.smtp_password || null,
+      smtp_password: null, // Never return password
       smtp_host: smtpData.smtp_host || null,
       smtp_port: smtpData.smtp_port || null,
       client_hostname: smtpData.client_hostname || null,
       ssl_tls_enabled: smtpData.ssl_tls_enabled || false,
+      sendgrid_api_key: null, // Never return API key for security
+      sendgrid_domain_email: smtpData.sendgrid_domain_email || null,
+      mailgun_api_key: null, // Never return API key for security
+      mailgun_domain_email: smtpData.mailgun_domain_email || null,
       // Email format fields
       email_tone: emailData.email_tone || null,
       email_description: emailData.email_description || null,
@@ -114,7 +137,11 @@ export async function GET(request: NextRequest) {
       business_intro: businessData.business_intro || null,
       // Lists
       business_pros: businessProsResult || [],
-      business_differences: businessDifferencesResult || []
+      business_differences: businessDifferencesResult || [],
+      // Email provider fields from user table
+      sendgrid_domain: userData.sendgrid_domain || null,
+      mailgun_domain: userData.mailgun_domain || null,
+      email_provider: userData.email_provider || null
     };
 
     return NextResponse.json(response, { status: 200 });

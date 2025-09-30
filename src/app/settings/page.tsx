@@ -9,6 +9,9 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { toast } from "sonner";
 import Link from "next/link";
 import { useSession, signOut } from "@/lib/auth-client";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 export default function SettingsPage() {
   const { data: session, isPending, refetch } = useSession();
@@ -43,6 +46,13 @@ export default function SettingsPage() {
   const [newDifference, setNewDifference] = useState("");
   const [addingPro, setAddingPro] = useState(false);
   const [addingDifference, setAddingDifference] = useState(false);
+
+  // New states for providers
+  const [emailProvider, setEmailProvider] = useState<'smtp' | 'sendgrid' | 'mailgun'>('smtp');
+  const [sendgridApiKey, setSendgridApiKey] = useState("");
+  const [sendgridDomainEmail, setSendgridDomainEmail] = useState("");
+  const [mailgunApiKey, setMailgunApiKey] = useState("");
+  const [mailgunDomainEmail, setMailgunDomainEmail] = useState("");
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -104,6 +114,11 @@ export default function SettingsPage() {
           const diffData = await diffRes.json();
           if (Array.isArray(diffData)) setDifferences(diffData);
         }
+
+        // Email provider settings
+        if (data?.email_provider !== undefined) setEmailProvider(data.email_provider as 'smtp' | 'sendgrid' | 'mailgun' || 'smtp');
+        if (data?.sendgrid_domain_email !== undefined) setSendgridDomainEmail(data.sendgrid_domain_email || "");
+        if (data?.mailgun_domain_email !== undefined) setMailgunDomainEmail(data.mailgun_domain_email || "");
       } catch {}
     };
     load();
@@ -173,16 +188,20 @@ export default function SettingsPage() {
           smtp_port: smtpPort ? Number(smtpPort) : null,
           client_hostname: clientHostname || null,
           ssl_tls_enabled: sslTlsEnabled,
+          sendgrid_api_key: sendgridApiKey || null,
+          sendgrid_domain_email: sendgridDomainEmail || null,
+          mailgun_api_key: mailgunApiKey || null,
+          mailgun_domain_email: mailgunDomainEmail || null,
         }),
       });
       const data = await res.json();
       if (!res.ok) {
-        toast.error(data?.error || "Failed to save SMTP settings");
+        toast.error(data?.error || "Failed to save email settings");
         return;
       }
-      toast.success("SMTP settings saved");
+      toast.success("Email settings saved");
     } catch (error) {
-      toast.error("Unexpected error saving SMTP settings");
+      toast.error("Unexpected error saving email settings");
     } finally {
       setSavingSmtp(false);
     }
@@ -328,13 +347,13 @@ export default function SettingsPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background py-12 px-4 sm:px-6 lg:px-8">
-      <Card className="w-full max-w-md">
+      <Card className="w-full max-w-2xl">
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl">Settings</CardTitle>
           <CardDescription>Manage your account preferences.</CardDescription>
         </CardHeader>
 
-        <CardContent>
+        <CardContent className="space-y-6">
           <form onSubmit={handleSave} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="name">Display name</Label>
@@ -351,41 +370,116 @@ export default function SettingsPage() {
             </Button>
           </form>
 
-          {/* SMTP Settings */}
+          {/* Email Provider Settings */}
           <div className="mt-8 border-t pt-6">
-            <h3 className="text-lg font-medium">SMTP Settings</h3>
+            <h3 className="text-lg font-medium">Email Provider Settings</h3>
             <p className="text-sm text-muted-foreground mt-1">
-              Configure SMTP so the AI agent can send emails. Only fill fields you want to set.
+              Configure your preferred email provider so the AI agent can send emails. Recommended options vary by use case.
             </p>
-            <form onSubmit={handleSaveSmtp} className="mt-4 space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="smtp-username">SMTP Username</Label>
-                <Input id="smtp-username" value={smtpUsername} onChange={(e) => setSmtpUsername(e.target.value)} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="smtp-password">SMTP Password</Label>
-                <Input id="smtp-password" type="password" autoComplete="off" value={smtpPassword} onChange={(e) => setSmtpPassword(e.target.value)} />
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="smtp-host">SMTP Host</Label>
-                  <Input id="smtp-host" value={smtpHost} onChange={(e) => setSmtpHost(e.target.value)} />
+            <Tabs defaultValue="smtp" className="mt-4">
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="smtp" className="flex items-center justify-start gap-2">
+                  <img 
+                    src="https://slelguoygbfzlpylpxfs.supabase.co/storage/v1/object/public/project-uploads/9b7010da-fc27-4841-a42d-13aebe0f0022/generated_images/simple-vector-icon-of-an-envelope-for-lo-7b8cd42c-20250930080757.jpg?" 
+                    alt="SMTP" 
+                    className="w-5 h-5" 
+                  />
+                  Local SMTP
+                </TabsTrigger>
+                <TabsTrigger value="sendgrid" className="flex items-center justify-start gap-2">
+                  <img 
+                    src="https://slelguoygbfzlpylpxfs.supabase.co/storage/v1/object/public/project-uploads/9b7010da-fc27-4841-a42d-13aebe0f0022/generated_images/sendgrid-official-logo%2c-vector-illustr-c33fd9bd-20250930080809.jpg?" 
+                    alt="SendGrid" 
+                    className="w-5 h-5" 
+                  />
+                  SendGrid
+                </TabsTrigger>
+                <TabsTrigger value="mailgun" className="flex items-center justify-start gap-2">
+                  <img 
+                    src="https://slelguoygbfzlpylpxfs.supabase.co/storage/v1/object/public/project-uploads/9b7010da-fc27-4841-a42d-13aebe0f0022/generated_images/mailgun-official-logo%2c-vector-illustra-276ff2cf-20250930080823.jpg?" 
+                    alt="Mailgun" 
+                    className="w-5 h-5" 
+                  />
+                  Mailgun
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="smtp" className="mt-4 space-y-4">
+                <div className="p-4 bg-muted/50 rounded-md">
+                  <p className="text-sm text-muted-foreground">
+                    Instant setup and can be proceeded immediately without needing any domain email configuration. However, this option is not ideal for large-scale outreach campaigns.
+                  </p>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="smtp-port">SMTP Port</Label>
-                  <Input id="smtp-port" inputMode="numeric" value={smtpPort} onChange={(e) => setSmtpPort(e.target.value)} />
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="smtp-username">SMTP Username</Label>
+                    <Input id="smtp-username" value={smtpUsername} onChange={(e) => setSmtpUsername(e.target.value)} placeholder="e.g., your-email@gmail.com" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="smtp-password">SMTP Password</Label>
+                    <Input id="smtp-password" type="password" autoComplete="off" value={smtpPassword} onChange={(e) => setSmtpPassword(e.target.value)} placeholder="App password or SMTP password" />
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="smtp-host">SMTP Host</Label>
+                      <Input id="smtp-host" value={smtpHost} onChange={(e) => setSmtpHost(e.target.value)} placeholder="e.g., smtp.gmail.com" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="smtp-port">SMTP Port</Label>
+                      <Input id="smtp-port" inputMode="numeric" value={smtpPort} onChange={(e) => setSmtpPort(e.target.value)} placeholder="587 or 465" />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="client-hostname">Client Hostname (Optional)</Label>
+                    <Input id="client-hostname" value={clientHostname} onChange={(e) => setClientHostname(e.target.value)} placeholder="e.g., yourdomain.com" />
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <input id="ssl-tls-enabled" type="checkbox" checked={sslTlsEnabled} onChange={(e) => setSslTlsEnabled(e.target.checked)} />
+                    <Label htmlFor="ssl-tls-enabled">Enable SSL/TLS</Label>
+                  </div>
                 </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="client-hostname">Client Hostname</Label>
-                <Input id="client-hostname" value={clientHostname} onChange={(e) => setClientHostname(e.target.value)} />
-              </div>
-              <div className="flex items-center gap-3">
-                <input id="ssl-tls-enabled" type="checkbox" checked={sslTlsEnabled} onChange={(e) => setSslTlsEnabled(e.target.checked)} />
-                <Label htmlFor="ssl-tls-enabled">Enable SSL/TLS</Label>
-              </div>
-              <Button type="submit" className="w-full" disabled={savingSmtp}>
-                {savingSmtp ? "Saving..." : "Save SMTP Settings"}
+              </TabsContent>
+
+              <TabsContent value="sendgrid" className="mt-4 space-y-4">
+                <div className="p-4 bg-muted/50 rounded-md">
+                  <p className="text-sm text-muted-foreground">
+                    Requires API key and domain email configuration. Recommended for outreach campaigns due to high deliverability and analytics features.
+                  </p>
+                </div>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="sendgrid-api-key">SendGrid API Key</Label>
+                    <Input id="sendgrid-api-key" type="password" autoComplete="off" value={sendgridApiKey} onChange={(e) => setSendgridApiKey(e.target.value)} placeholder="SG.xxxxxxxxxxxxxxxxxxxxxxx" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="sendgrid-domain-email">Domain Email</Label>
+                    <Input id="sendgrid-domain-email" type="email" value={sendgridDomainEmail} onChange={(e) => setSendgridDomainEmail(e.target.value)} placeholder="e.g., noreply@yourdomain.com" />
+                  </div>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="mailgun" className="mt-4 space-y-4">
+                <div className="p-4 bg-muted/50 rounded-md">
+                  <p className="text-sm text-muted-foreground">
+                    Requires API key and domain email configuration. Recommended for outreach campaigns with excellent deliverability and detailed reporting.
+                  </p>
+                </div>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="mailgun-api-key">Mailgun API Key</Label>
+                    <Input id="mailgun-api-key" type="password" autoComplete="off" value={mailgunApiKey} onChange={(e) => setMailgunApiKey(e.target.value)} placeholder="key-xxxxxxxxxxxxxxxxxxxx" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="mailgun-domain-email">Domain Email</Label>
+                    <Input id="mailgun-domain-email" type="email" value={mailgunDomainEmail} onChange={(e) => setMailgunDomainEmail(e.target.value)} placeholder="e.g., noreply@yourdomain.com" />
+                  </div>
+                </div>
+              </TabsContent>
+            </Tabs>
+
+            <form onSubmit={handleSaveSmtp}>
+              <Button type="submit" className="w-full mt-6" disabled={savingSmtp}>
+                {savingSmtp ? "Saving..." : "Save Email Provider Settings"}
               </Button>
             </form>
           </div>

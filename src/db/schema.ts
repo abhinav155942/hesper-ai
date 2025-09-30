@@ -18,6 +18,11 @@ export const user = sqliteTable("user", {
   lastResetDate: text("last_reset_date"),
   basicMessageCount: integer("basic_message_count").default(0).notNull(),
   proMessageCount: integer("pro_message_count").default(0).notNull(),
+  sendgridApiKey: text("sendgrid_api_key"),
+  sendgridDomain: text("sendgrid_domain"),
+  mailgunApiKey: text("mailgun_api_key"),
+  mailgunDomain: text("mailgun_domain"),
+  emailProvider: text("email_provider"),
   createdAt: integer("created_at", { mode: "timestamp" })
     .$defaultFn(() => new Date())
     .notNull(),
@@ -84,6 +89,10 @@ export const smtpSettings = sqliteTable('smtp_settings', {
   smtpPort: integer('smtp_port'),
   clientHostname: text('client_hostname'),
   sslTlsEnabled: integer('ssl_tls_enabled', { mode: 'boolean' }).default(false),
+  sendgridApiKey: text('sendgrid_api_key'),
+  sendgridDomainEmail: text('sendgrid_domain_email'),
+  mailgunApiKey: text('mailgun_api_key'),
+  mailgunDomainEmail: text('mailgun_domain_email'),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
 }, (table) => ({

@@ -1,66 +1,101 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import * as TabsPrimitive from "@radix-ui/react-tabs"
+import * as React from "react";
 
-import { cn } from "@/lib/utils"
+type TabsContextValue = {
+  value: string | undefined;
+  setValue: (v: string) => void;
+};
 
-function Tabs({
-  className,
-  ...props
-}: React.ComponentProps<typeof TabsPrimitive.Root>) {
-  return (
-    <TabsPrimitive.Root
-      data-slot="tabs"
-      className={cn("flex flex-col gap-2", className)}
-      {...props}
-    />
-  )
+const TabsContext = React.createContext<TabsContextValue | null>(null);
+
+interface TabsProps {
+  defaultValue?: string;
+  value?: string;
+  onValueChange?: (value: string) => void;
+  className?: string;
+  children: React.ReactNode;
 }
 
-function TabsList({
-  className,
-  ...props
-}: React.ComponentProps<typeof TabsPrimitive.List>) {
+export const Tabs = ({ defaultValue, value, onValueChange, className, children }: TabsProps) => {
+  const isControlled = value !== undefined;
+  const [internalValue, setInternalValue] = React.useState<string | undefined>(defaultValue);
+  const activeValue = isControlled ? value : internalValue;
+
+  const setValue = React.useCallback(
+    (v: string) => {
+      if (!isControlled) setInternalValue(v);
+      onValueChange?.(v);
+    },
+    [isControlled, onValueChange]
+  );
+
   return (
-    <TabsPrimitive.List
-      data-slot="tabs-list"
-      className={cn(
-        "bg-muted text-muted-foreground inline-flex h-9 w-fit items-center justify-center rounded-lg p-[3px]",
-        className
-      )}
-      {...props}
-    />
-  )
+    <TabsContext.Provider value={{ value: activeValue, setValue }}>
+      <div className={className}>{children}</div>
+    </TabsContext.Provider>
+  );
+};
+
+interface TabsListProps extends React.HTMLAttributes<HTMLDivElement> {
+  children: React.ReactNode;
 }
 
-function TabsTrigger({
-  className,
-  ...props
-}: React.ComponentProps<typeof TabsPrimitive.Trigger>) {
+export const TabsList = ({ className, children, ...props }: TabsListProps) => {
   return (
-    <TabsPrimitive.Trigger
-      data-slot="tabs-trigger"
-      className={cn(
-        "data-[state=active]:bg-background dark:data-[state=active]:text-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:outline-ring dark:data-[state=active]:border-input dark:data-[state=active]:bg-input/30 text-foreground dark:text-muted-foreground inline-flex h-[calc(100%-1px)] flex-1 items-center justify-center gap-1.5 rounded-md border border-transparent px-2 py-1 text-sm font-medium whitespace-nowrap transition-[color,box-shadow] focus-visible:ring-[3px] focus-visible:outline-1 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:shadow-sm [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
-        className
-      )}
-      {...props}
-    />
-  )
+    <div role="tablist" className={className} {...props}>
+      {children}
+    </div>
+  );
+};
+
+interface TabsTriggerProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  value: string;
+  children: React.ReactNode;
 }
 
-function TabsContent({
-  className,
-  ...props
-}: React.ComponentProps<typeof TabsPrimitive.Content>) {
+export const TabsTrigger = ({ value, className, children, onClick, ...props }: TabsTriggerProps) => {
+  const ctx = React.useContext(TabsContext);
+  const selected = ctx?.value === value;
+
+  const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    ctx?.setValue(value);
+    onClick?.(e);
+  };
+
   return (
-    <TabsPrimitive.Content
-      data-slot="tabs-content"
-      className={cn("flex-1 outline-none", className)}
+    <button
+      type="button"
+      role="tab"
+      aria-selected={selected}
+      data-state={selected ? "active" : "inactive"}
+      className={className}
+      onClick={handleClick}
       {...props}
-    />
-  )
+    >
+      {children}
+    </button>
+  );
+};
+
+interface TabsContentProps extends React.HTMLAttributes<HTMLDivElement> {
+  value: string;
+  children: React.ReactNode;
 }
 
-export { Tabs, TabsList, TabsTrigger, TabsContent }
+export const TabsContent = ({ value, className, children, ...props }: TabsContentProps) => {
+  const ctx = React.useContext(TabsContext);
+  const selected = ctx?.value === value;
+
+  return (
+    <div
+      role="tabpanel"
+      hidden={!selected}
+      data-state={selected ? "active" : "inactive"}
+      className={className}
+      {...props}
+    >
+      {selected ? children : null}
+    </div>
+  );
+};
