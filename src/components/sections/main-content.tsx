@@ -109,6 +109,7 @@ export default function MainContent({
               setChatMode(false); // Ensure back to home
             }
           }} 
+          selectedModel={selectedModel}
         />
       ) : (
         <div className="w-full max-w-[768px] mb-4">
@@ -122,13 +123,12 @@ export default function MainContent({
                 className="flex-grow bg-transparent text-base md:text-lg text-foreground placeholder-muted-foreground outline-none border-none py-3 px-2 sm:px-4"
               />
               <button
-                type="button"
                 onClick={() => setLiveMode(true)}
-                className="p-2 rounded-full hover:bg-muted/80 transition-colors"
-                disabled={internalChatMode} // Disable in chat mode
-                title="Voice chat (home only)"
+                className="p-2 text-gray-500 hover:text-primary transition-colors"
+                title="Start live Hesper talk"
+                disabled={!isConnected} // Assume connected state from parent if needed
               >
-                <Mic className="h-6 w-6 text-foreground/80" />
+                <Mic className="h-5 w-5" />
               </button>
               <button
                 type="submit"

@@ -1,216 +1,109 @@
 import { WebSocket } from 'ws';
 import { useServer } from 'next-ws';
-import textToSpeech from '@google-cloud/text-to-speech';
-
-const API_KEY = process.env.GOOGLE_API_KEY!;
-const MODEL = 'gemini-1.5-flash-exp';
-const GEMINI_WS_URL = `wss://generativelanguage.googleapis.com/v1beta/models/${MODEL}:bidiGenerateContent?key=${API_KEY}`;
+import { NextRequest } from 'next/server'; // If needed for Hesper integration
 
 export function SOCKET(req, socket, head) {
   const clientWS = useServer(req, socket);
-  let geminiWS: WebSocket | null = null;
-  let audioBuffer = Buffer.alloc(0);
-  let sessionConfigured = false;
+  let hesperStream: any = null; // Placeholder for Hesper streaming response
+  let buffer = ''; // For accumulating partial messages
 
   clientWS.on('open', function open() {
-    console.log('Client connected to voice chat');
-    
-    geminiWS = new WebSocket(GEMINI_WS_URL);
-    
-    geminiWS.onopen = () => {
-      console.log('Connected to Gemini Live API');
-      
-      // Send setup message first
-      const setupMessage = {
-        bidiGenerateContentSetup: {
-          model: MODEL,
-          generationConfig: {
-            temperature: 0.7,
-            topP: 0.95,
-            topK: 40,
-            maxOutputTokens: 1024,
-            responseModality: 'AUDIO',
-          },
-          systemInstruction: {
-            parts: [{ text: 'You are Hesper, a conversational AI assistant for business development. Respond naturally and help with lead generation queries.' }]
-          },
-          tools: []
-        }
-      };
-      geminiWS.send(JSON.stringify(setupMessage));
-      sessionConfigured = true;
-      
-      clientWS.send(JSON.stringify({ type: 'connected', message: 'Voice chat ready' }));
-    };
-
-    geminiWS.onerror = (err) => {
-      console.error('Gemini WS error:', err);
-      clientWS.send(JSON.stringify({ type: 'error', message: 'AI connection failed' }));
-    };
-
-    geminiWS.onclose = (event) => {
-      console.log('Gemini connection closed:', event.code, event.reason);
-      clientWS.send(JSON.stringify({ type: 'disconnected', message: 'AI disconnected' }));
-    };
-
-    geminiWS.onmessage = (event) => {
-      if (typeof event.data === 'string') {
-        try {
-          const message = JSON.parse(event.data);
-          console.log('Received from Gemini:', message);
-          
-          if (message.endOfTurn) {
-            clientWS.send(JSON.stringify({ type: 'response-end' }));
-            return;
-          }
-          
-          if (message.serverResponse) {
-            if (message.serverResponse.text) {
-              clientWS.send(JSON.stringify({ type: 'response', text: message.serverResponse.text }));
-            }
-            return;
-          }
-          
-          if (message.candidates && message.candidates.length > 0) {
-            const candidate = message.candidates[0];
-            const parts = candidate.content?.parts || [];
-            let text = '';
-            let hasAudio = false;
-            
-            for (const part of parts) {
-              if (part.text) {
-                text += part.text;
-              }
-              if (part.inlineData && part.inlineData.mimeType?.startsWith('audio/')) {
-                const base64Audio = part.inlineData.data;
-                const audioData = Buffer.from(base64Audio, 'base64');
-                console.log(`Audio chunk: ${audioData.length} bytes`);
-                clientWS.send(audioData, { binary: true });
-                hasAudio = true;
-              }
-            }
-            
-            if (text.trim() && !hasAudio) {
-              // Fallback to TTS if no audio from Gemini
-              generateTTSAudio(text).then(audioBuffer => {
-                if (audioBuffer) {
-                  clientWS.send(audioBuffer, { binary: true });
-                }
-                clientWS.send(JSON.stringify({ type: 'response', text: text.trim() }));
-              });
-            } else if (text.trim()) {
-              clientWS.send(JSON.stringify({ type: 'response', text: text.trim() }));
-            }
-          }
-        } catch (e) {
-          console.error('Parse error:', e);
-          // Fallback TTS on error
-          if (typeof event.data === 'string') {
-            const match = event.data.match(/"text":"([^"]+)"/);
-            if (match) {
-              const text = match[1];
-              generateTTSAudio(text).then(audioBuffer => {
-                if (audioBuffer) clientWS.send(audioBuffer, { binary: true });
-                clientWS.send(JSON.stringify({ type: 'response', text }));
-              });
-            }
-          }
-        }
-      } else {
-        clientWS.send(event.data, { binary: true });
-      }
-    };
+    console.log('Client connected to Hesper voice chat');
+    clientWS.send(JSON.stringify({ type: 'connected', message: 'Hesper voice chat ready' }));
   });
 
   clientWS.on('message', function message(data) {
-    if (!sessionConfigured) {
-      console.log('Session not configured, buffering');
-      if (Buffer.isBuffer(data)) {
-        audioBuffer = Buffer.concat([audioBuffer, data]);
-      }
-      return;
-    }
-
-    // Flush buffered audio if any
-    if (audioBuffer.length > 0) {
-      forwardAudio(audioBuffer);
-      audioBuffer = Buffer.alloc(0);
-    }
-
     if (typeof data === 'string') {
       try {
         const parsed = JSON.parse(data);
-        if (parsed.type === 'end-turn') {
-          const endTurn = {
-            bidiGenerateContentRealtimeInput: { 
-              endOfTurn: true 
-            }
-          };
-          if (geminiWS && geminiWS.readyState === WebSocket.OPEN) {
-            geminiWS.send(JSON.stringify(endTurn));
+        if (parsed.type === 'transcript') {
+          // Handle incoming transcribed text from client STT
+          const userMessage = parsed.text;
+          console.log('User message:', userMessage);
+          
+          // Call Hesper API for response
+          handleHesperRequest(userMessage, clientWS);
+        } else if (parsed.type === 'end-turn') {
+          // End streaming if active
+          if (hesperStream) {
+            hesperStream.destroy();
+            hesperStream = null;
           }
+          clientWS.send(JSON.stringify({ type: 'response-end' }));
         }
       } catch (e) {
         console.error('JSON parse error:', e);
       }
-    } else if (Buffer.isBuffer(data)) {
-      // Handle incoming PCM audio from client
-      forwardAudio(data);
     }
   });
 
-  async function generateTTSAudio(text: string): Promise<Buffer | null> {
+  async function handleHesperRequest(message: string, ws: any) {
     try {
-      const client = new textToSpeech.TextToSpeechClient();
-      const request = {
-        input: { text: text },
-        voice: { languageCode: 'en-US', ssmlGender: 'NEUTRAL' },
-        audioConfig: { 
-          audioEncoding: 'LINEAR16',
-          sampleRateHertz: 16000,
-          speakingRate: 1.0
+      // POST to Hesper chat API for streaming response
+      const response = await fetch('http://localhost:3000/api/hesper/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('bearer_token') || ''}`, // If auth required
         },
-      };
-      const [response] = await client.synthesizeSpeech(request);
-      return Buffer.from(response.audioContent as string, 'base64');
-    } catch (err) {
-      console.error('TTS fallback error:', err);
-      return null;
-    }
-  }
+        body: JSON.stringify({
+          message,
+          model: 'hesper-1.0v', // Or selected model
+          stream: true // Enable streaming
+        })
+      });
 
-  function forwardAudio(audioData: Buffer) {
-    if (!geminiWS || geminiWS.readyState !== WebSocket.OPEN) {
-      return;
-    }
+      if (!response.body) {
+        ws.send(JSON.stringify({ type: 'error', message: 'No response body' }));
+        return;
+      }
 
-    // Convert PCM buffer to base64
-    const base64Audio = audioData.toString('base64');
-    
-    const realtimeInput = {
-      bidiGenerateContentRealtimeInput: {
-        audio: {
-          data: base64Audio,
-          mimeType: 'audio/pcm;rate=16000'
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let fullResponse = '';
+
+      // Stream Hesper response chunks
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value);
+        buffer += chunk;
+
+        // Parse SSE-like chunks from Hesper (assuming delta format)
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || ''; // Keep incomplete line
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const jsonData = JSON.parse(line.slice(6));
+              if (jsonData.choices && jsonData.choices[0].delta?.content) {
+                const delta = jsonData.choices[0].delta.content;
+                fullResponse += delta;
+                ws.send(JSON.stringify({ type: 'response', text: delta })); // Send partial text for real-time display
+              }
+            } catch (e) {
+              console.error('Chunk parse error:', e);
+            }
+          }
         }
       }
-    };
-    
-    console.log('Forwarding audio to Gemini, length:', audioData.length);
-    geminiWS.send(JSON.stringify(realtimeInput));
+
+      // Final full response for TTS trigger on client
+      ws.send(JSON.stringify({ type: 'response', text: fullResponse, final: true }));
+    } catch (err) {
+      console.error('Hesper request error:', err);
+      ws.send(JSON.stringify({ type: 'error', message: 'Failed to get Hesper response' }));
+    }
   }
 
   clientWS.on('close', function close() {
     console.log('Client disconnected');
-    if (geminiWS) {
-      geminiWS.close();
-    }
+    if (hesperStream) hesperStream.destroy();
   });
 
   clientWS.on('error', function error(err) {
     console.error('Client WS error:', err);
-    if (geminiWS) {
-      geminiWS.close();
-    }
   });
 }
