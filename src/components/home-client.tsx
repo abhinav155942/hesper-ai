@@ -1,19 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Header from "@/components/sections/header";
-import Sidebar from "@/components/sections/sidebar";
-import MainContent from "@/components/sections/main-content";
-import { useSession } from "@/lib/auth-client";
-import { useRouter } from "next/navigation";
 
 /**
  * Home page client component
  * Manages sidebar, model selection, chat mode, and session state
  */
 export const HomeClient: React.FC = () => {
-  const router = useRouter();
-  const { data: session, isPending } = useSession();
   const [isMobile, setIsMobile] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [selectedModel, setSelectedModel] = useState<"hesper-1.0v" | "hesper-pro">(
@@ -31,11 +24,6 @@ export const HomeClient: React.FC = () => {
   }, []);
 
   const handleNewChat = () => {
-    if (isPending) return;
-    if (!session?.user) {
-      router.push('/sign-in');
-      return;
-    }
     setChatMode(true);
     setChatKey((prev) => prev + 1);
     setCurrentSessionId(null);
@@ -43,18 +31,9 @@ export const HomeClient: React.FC = () => {
   };
 
   const handleLoadSession = (id: string) => {
-    if (isPending) return;
-    if (!session?.user) {
-      router.push('/sign-in');
-      return;
-    }
     setCurrentSessionId(id);
     setChatMode(true);
   };
-
-  if (isPending) {
-    return <div className="flex items-center justify-center h-screen">Loading...</div>;
-  }
 
   return (
     <div className="flex h-screen flex-col bg-background overflow-hidden">

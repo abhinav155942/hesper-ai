@@ -131,25 +131,3 @@ export const businessDifferences = sqliteTable('business_differences', {
 }, (table) => ({
   userIdIdx: index('business_differences_user_id_idx').on(table.userId),
 }));
-
-// Chat tables
-export const chats = sqliteTable('chats', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  userId: text('user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
-  title: text('title'),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
-  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
-}, (table) => ({
-  userIdUpdatedAtIdx: index('chats_user_id_updated_at_idx').on(table.userId, table.updatedAt),
-}));
-
-export const messages = sqliteTable('messages', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  chatId: integer('chat_id').notNull().references(() => chats.id, { onDelete: 'cascade' }),
-  userId: text('user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
-  role: text('role').notNull().$type<'user' | 'assistant'>(),
-  content: text('content').notNull(),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
-}, (table) => ({
-  chatIdCreatedAtIdx: index('messages_chat_id_created_at_idx').on(table.chatId, table.createdAt),
-}));

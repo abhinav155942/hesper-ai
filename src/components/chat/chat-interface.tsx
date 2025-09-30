@@ -5,11 +5,10 @@ import { useState, useRef, useEffect } from "react";
 import { Send, Mic, RotateCcw, Copy, ThumbsUp, ThumbsDown, Zap, Brain, ChevronDown, ChevronLeft, Upload, MoreHorizontal, FileDown, MailCheck } from 'lucide-react';
 import { toast } from "sonner";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuLabel } from "@/components/ui/dropdown-menu";
-import { useSession } from "@/lib/auth-client";
 
 const N8N_WEBHOOK_URL = "/api/hesper/chat";
 
-async function fetchN8nReply(message: string, model: string, history: Array<{role: 'user'|'assistant'; content: string}>, chatId: number | null): Promise<string> {
+async function fetchN8nReply(message: string, model: string, chatHistory: Array<{ role: string; content: string }>): Promise<string> {
   try {
     const token = typeof window !== 'undefined' ? localStorage.getItem("bearer_token") : null;
     const res = await fetch(N8N_WEBHOOK_URL, {
@@ -21,8 +20,7 @@ async function fetchN8nReply(message: string, model: string, history: Array<{rol
       body: JSON.stringify({
         message,
         model,
-        history,
-        chatId
+        chat_history: Array.isArray(chatHistory) ? chatHistory.slice(-6) : []
       })
     });
 
@@ -65,15 +63,12 @@ interface ChatInterfaceProps {
   selectedModel: 'hesper-1.0v' | 'hesper-pro';
   onBack: () => void;
   initialMessage?: string;
-  chatId?: number; // new: open existing chat
-  currentSessionId: string | null;
-  onLoadSession: (id: string) => void;
+  currentSessionId?: string;
+  onLoadSession?: (id: string) => void;
 }
 
 export default function ChatInterface({ selectedModel, onBack, initialMessage, currentSessionId, onLoadSession }: ChatInterfaceProps) {
-  const { data: session } = useSession();
   const [messages, setMessages] = useState<Message[]>([]);
-  const [chatId, setChatId] = useState<number | null>(null);
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
@@ -137,10 +132,50 @@ export default function ChatInterface({ selectedModel, onBack, initialMessage, c
     }
   };
 
-  const buildHistory = (nextUserContent?: string): Array<{role:'user'|'assistant'; content:string}> => {
-    const base = messages.map(m => ({ role: m.type, content: m.content })) as Array<{role:'user'|'assistant'; content:string}>;
-    const withNext = nextUserContent ? [...base, { role: 'user', content: nextUserContent }] : base;
-    return withNext.slice(-6);
+  const persistSession = (msgs: Message[]) => {
+    if (typeof window === 'undefined') return;
+    // Initialize session id on first persist
+    if (!sessionIdRef.current) {
+      sessionIdRef.current = `s_${Date.now()}`;
+    }
+    const id = sessionIdRef.current;
+    const titleSource = msgs.find(m => m.type === 'user')?.content || "New chat";
+    const title = (titleSource || "New chat").slice(0, 60);
+    const lastUpdated = Date.now();
+
+    // Store compact messages for history open (role/content/timestamp)
+    const compact = msgs.map(m => ({
+      role: m.type === 'user' ? 'user' : 'assistant',
+      content: m.content,
+      timestamp: m.timestamp instanceof Date ? m.timestamp.toISOString() : new Date().toISOString()
+    }));
+    try {
+      localStorage.setItem(`hesper_chat_session_${id}`, JSON.stringify({ id, title, lastUpdated, messages: compact }));
+      const listRaw = localStorage.getItem('hesper_chat_sessions');
+      let list: Array<{ id: string; title: string; lastUpdated: number }> = [];
+      if (listRaw) {
+        try { list = JSON.parse(listRaw) || []; } catch { list = []; }
+      }
+      // upsert
+      const existingIdx = list.findIndex(s => s.id === id);
+      if (existingIdx >= 0) {
+        list[existingIdx] = { id, title, lastUpdated };
+      } else {
+        list.unshift({ id, title, lastUpdated });
+      }
+      // keep last 50
+      list = list.sort((a,b)=>b.lastUpdated-a.lastUpdated).slice(0,50);
+      localStorage.setItem('hesper_chat_sessions', JSON.stringify(list));
+      // notify sidebar
+      window.dispatchEvent(new CustomEvent('hesper:chat-sessions-updated'));
+    } catch {}
+  };
+
+  const buildHistory = (msgs: Message[]): Array<{ role: string; content: string }> => {
+    const pairs = msgs
+      .filter(m => !m.isTyping && m.content)
+      .map(m => ({ role: m.type === 'user' ? 'user' : 'assistant', content: m.content }));
+    return pairs.slice(-6);
   };
 
   useEffect(() => {
@@ -219,95 +254,53 @@ export default function ChatInterface({ selectedModel, onBack, initialMessage, c
   }, []);
 
   useEffect(() => {
-    if (currentSessionId && session?.user && !sessionLoaded) {
-      loadSessionFromDB();
+    if (currentSessionId && currentSessionId !== sessionIdRef.current && !sessionLoaded) {
+      loadSession(currentSessionId);
     }
-  }, [currentSessionId, session]);
+  }, [currentSessionId]);
 
-  const loadSessionFromDB = async () => {
-    const token = localStorage.getItem("bearer_token");
-    if (!token) return;
-
+  const loadSession = async (id: string) => {
     try {
-      const res = await fetch(`/api/chats/${currentSessionId}/messages`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (res.ok) {
-        const data = await res.json();
-        const messagesList = data.map((m: any) => ({
-          id: m.id.toString(),
+      const sessionRaw = localStorage.getItem(`hesper_chat_session_${id}`);
+      if (sessionRaw) {
+        const session = JSON.parse(sessionRaw);
+        const messages: Message[] = session.messages.map((m: any) => ({
+          id: `loaded-${m.role}-${Date.now() + Math.random()}`,
           type: m.role as 'user' | 'assistant',
           content: m.content,
-          timestamp: new Date(m.createdAt),
+          timestamp: new Date(m.timestamp),
           modelName: selectedModel === 'hesper-pro' ? 'Hesper Pro' : 'Hesper'
-        }));
-        setMessages(messagesList);
+        })).filter(m => m.content);
+        setMessages(messages);
+        sessionIdRef.current = id;
+        // Notify parent
+        onLoadSession?.(id);
         setSessionLoaded(true);
+        // Trigger chat mode if in parent
+        window.dispatchEvent(new CustomEvent('hesper:load-session', { detail: { id } }));
       }
     } catch (error) {
-      console.error('Failed to load session from DB:', error);
+      console.error('Failed to load session:', error);
     }
   };
 
-  const ensureChat = async (titleHint: string): Promise<number> => {
-    if (currentSessionId && session?.user) {
-      return Number(currentSessionId);
-    }
-
-    if (!session?.user) {
-      throw new Error('Authentication required to save chats');
-    }
-
-    const token = localStorage.getItem("bearer_token");
-    if (!token) {
-      throw new Error('No auth token');
-    }
-
-    const res = await fetch('/api/chats', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`
-      },
-      body: JSON.stringify({ title: titleHint.slice(0, 100) || null })
-    });
-
-    if (!res.ok) {
-      throw new Error('Failed to create chat');
-    }
-
-    const data = await res.json();
-    const cid = data.id;
-    onLoadSession(cid.toString());
-    window.dispatchEvent(new CustomEvent('hesper:chat-sessions-updated'));
-    return cid;
+  const handleNewChat = () => {
+    setMessages([]);
+    setInputValue("");
+    sessionIdRef.current = null;
+    setSessionLoaded(false);
+    // Notify parent to clear session
+    window.dispatchEvent(new CustomEvent('hesper:new-chat'));
   };
 
-  const saveMessage = async (cid: number, role: 'user'|'assistant', content: string) => {
-    const token = localStorage.getItem("bearer_token");
-    if (!token || !session?.user) return;
-
-    try {
-      const res = await fetch(`/api/chats/${cid}/messages`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({ role, content })
-      });
-      if (!res.ok) {
-        console.error('Failed to save message');
-      } else {
-        window.dispatchEvent(new CustomEvent('hesper:chat-sessions-updated'));
-      }
-    } catch (error) {
-      console.error('Error saving message:', error);
+  useEffect(() => {
+    if (currentSessionId === null) {
+      handleNewChat();
     }
-  };
+  }, [currentSessionId]);
 
   const handleInitialMessage = async (message: string) => {
-    if (inFlightRef.current) return;
+    if (inFlightRef.current) return; // prevent concurrent initial sends
     inFlightRef.current = true;
     const currentModelName = selectedModel === 'hesper-pro' ? "Hesper Pro" : "Hesper";
     const userMessage: Message = {
@@ -321,6 +314,7 @@ export default function ChatInterface({ selectedModel, onBack, initialMessage, c
     setIsLoading(true);
     setIsTyping(true);
 
+    // Add typing indicator
     const typingMessage: Message = {
       id: `typing-${Date.now()}`,
       type: 'assistant',
@@ -332,12 +326,10 @@ export default function ChatInterface({ selectedModel, onBack, initialMessage, c
     setMessages((prev) => [...prev, typingMessage]);
 
     try {
-      const cid = await ensureChat(message);
-      await saveMessage(cid, 'user', message);
-      const reply = await fetchN8nReply(message, selectedModel, buildHistory(), cid);
-      await saveMessage(cid, 'assistant', reply || "");
-      window.dispatchEvent(new CustomEvent('hesper:chat-sessions-updated'));
+      const history = buildHistory([userMessage]);
+      const reply = await fetchN8nReply(message, selectedModel, history);
 
+      // Remove typing indicator and add response (with dedupe)
       const assistantMessage: Message = {
         id: `assistant-${Date.now()}`,
         type: 'assistant',
@@ -349,14 +341,16 @@ export default function ChatInterface({ selectedModel, onBack, initialMessage, c
       setMessages((prev) => {
         const withoutTyping = prev.filter((m) => !m.isTyping);
         const lastAssistant = [...withoutTyping].reverse().find((m) => m.type === 'assistant');
-        if (lastAssistant && lastAssistant.content.trim() === (reply || "").trim()) {
-          return withoutTyping;
-        }
-        return [...withoutTyping, assistantMessage];
+        const next = (lastAssistant && lastAssistant.content.trim() === (reply || "").trim()) ? withoutTyping : [...withoutTyping, assistantMessage];
+        // persist
+        persistSession(next);
+        return next;
       });
     } catch (error) {
       setMessages([userMessage]);
       toast.error("Failed to get response. Please try again.");
+      // persist even failed user start
+      persistSession([userMessage]);
     } finally {
       setIsLoading(false);
       setIsTyping(false);
@@ -366,8 +360,8 @@ export default function ChatInterface({ selectedModel, onBack, initialMessage, c
 
   const handleSend = async (content: string) => {
     if (!content.trim() || isLoading) return;
-    if (sendingRef.current) return;
-    if (inFlightRef.current) return;
+    if (sendingRef.current) return; // prevent rapid double-send
+    if (inFlightRef.current) return; // prevent concurrent sends
     sendingRef.current = true;
     inFlightRef.current = true;
     const currentModelName = selectedModel === 'hesper-pro' ? 'Hesper Pro' : 'Hesper';
@@ -379,11 +373,16 @@ export default function ChatInterface({ selectedModel, onBack, initialMessage, c
       timestamp: new Date()
     };
 
-    setMessages((prev) => [...prev, userMessage]);
+    setMessages((prev) => {
+      const next = [...prev, userMessage];
+      persistSession(next);
+      return next;
+    });
     setInputValue("");
     setIsLoading(true);
     setIsTyping(true);
 
+    // Add typing indicator
     const typingMessage: Message = {
       id: `typing-${Date.now()}`,
       type: 'assistant',
@@ -395,12 +394,10 @@ export default function ChatInterface({ selectedModel, onBack, initialMessage, c
     setMessages((prev) => [...prev, typingMessage]);
 
     try {
-      const cid = await ensureChat(content);
-      await saveMessage(cid, 'user', content.trim());
-      const reply = await fetchN8nReply(userMessage.content, selectedModel, buildHistory(userMessage.content), cid);
-      await saveMessage(cid, 'assistant', reply || "");
-      window.dispatchEvent(new CustomEvent('hesper:chat-sessions-updated'));
+      const history = buildHistory([...messages, userMessage]);
+      const reply = await fetchN8nReply(userMessage.content, selectedModel, history);
 
+      // Remove typing indicator and add response (with dedupe)
       const assistantMessage: Message = {
         id: `assistant-${Date.now()}`,
         type: 'assistant',
@@ -412,13 +409,17 @@ export default function ChatInterface({ selectedModel, onBack, initialMessage, c
       setMessages((prev) => {
         const withoutTyping = prev.filter((m) => !m.isTyping);
         const lastAssistant = [...withoutTyping].reverse().find((m) => m.type === 'assistant');
-        if (lastAssistant && lastAssistant.content.trim() === (reply || "").trim()) {
-          return withoutTyping;
-        }
-        return [...withoutTyping, assistantMessage];
+        const next = (lastAssistant && lastAssistant.content.trim() === (reply || "").trim()) ? withoutTyping : [...withoutTyping, assistantMessage];
+        persistSession(next);
+        return next;
       });
     } catch (error) {
-      setMessages((prev) => prev.filter((m) => !m.isTyping));
+      // Remove typing indicator
+      setMessages((prev) => {
+        const next = prev.filter((m) => !m.isTyping);
+        persistSession(next);
+        return next;
+      });
       toast.error("Failed to get response. Please try again.");
     } finally {
       setIsLoading(false);

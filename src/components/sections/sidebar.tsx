@@ -13,17 +13,57 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-import { useSession } from "@/lib/auth-client";
-
 interface SidebarProps {
   sidebarOpen: boolean;
   setSidebarOpen: (open: boolean) => void;
   isMobile: boolean;
   onNewChat?: () => void;
-  onSelectSession?: (id: string) => void;
+  onSelectSession?: (id: string) => void; // optional callback when selecting a chat
+}
+
+// Lightweight type for stored sessions in localStorage
+interface StoredSession {
+  id: string;
+  title: string;
+  lastUpdated: number;
 }
 
 export default function Sidebar({ sidebarOpen, setSidebarOpen, isMobile, onNewChat, onSelectSession }: SidebarProps) {
+  const [sessions, setSessions] = React.useState<StoredSession[]>([]);
+
+  // Load sessions from localStorage
+  React.useEffect(() => {
+    const load = () => {
+      if (typeof window === "undefined") return;
+      try {
+        const raw = localStorage.getItem("hesper_chat_sessions");
+        const list: StoredSession[] = raw ? JSON.parse(raw) : [];
+        setSessions(Array.isArray(list) ? list : []);
+      } catch {
+        setSessions([]);
+      }
+    };
+    load();
+
+    // Listen to updates emitted by chat interface
+    const handler = () => load();
+    window.addEventListener("hesper:chat-sessions-updated", handler as any);
+    return () => window.removeEventListener("hesper:chat-sessions-updated", handler as any);
+  }, []);
+
+  const handleSelectSession = (id: string) => {
+    // Notify parent if provided
+    onSelectSession?.(id);
+    // Also drop a hint key for other components if they want to pick it up
+    try {
+      localStorage.setItem("hesper_selected_session_id", id);
+      // Optional broadcast
+      window.dispatchEvent(new CustomEvent("hesper:chat-session-selected", { detail: { id } }));
+    } catch {}
+    // On mobile, collapse sidebar
+    if (isMobile) setSidebarOpen(false);
+  };
+
   let sidebarClasses = "bg-card p-2 transition-all duration-300 ease-in-out overflow-y-auto";
   const hClasses = isMobile ? "h-screen" : "h-full";
   const wClasses = sidebarOpen ? (isMobile ? "w-full" : "w-[280px]") : "w-[72px]";
@@ -48,46 +88,6 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen, isMobile, onNewCh
     { icon: Building, label: "For Business", href: "#" },
     { icon: CreditCard, label: "Checkout", href: "/checkout" },
   ];
-
-  const [sessions, setSessions] = React.useState<StoredSession[]>([]);
-  const { data: session } = useSession();
-
-  React.useEffect(() => {
-    if (!session?.user?.id) return;
-
-    const fetchChats = async () => {
-      const token = localStorage.getItem("bearer_token");
-      if (!token) return;
-
-      try {
-        const res = await fetch("/api/chats", {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        if (res.ok) {
-          const chats = await res.json();
-          const sessionList = chats.map((c: any) => ({
-            id: c.id.toString(),
-            title: c.title || "Untitled chat",
-            lastUpdated: new Date(c.updatedAt).getTime()
-          })).sort((a: StoredSession, b: StoredSession) => b.lastUpdated - a.lastUpdated);
-          setSessions(sessionList);
-        }
-      } catch (error) {
-        console.error("Failed to fetch chats:", error);
-      }
-    };
-
-    fetchChats();
-
-    const handler = () => fetchChats();
-    window.addEventListener("hesper:chat-sessions-updated", handler as any);
-    return () => window.removeEventListener("hesper:chat-sessions-updated", handler as any);
-  }, [session]);
-
-  const handleSelectSession = (id: string) => {
-    onSelectSession?.(id);
-    if (isMobile) setSidebarOpen(false);
-  };
 
   return (
     <TooltipProvider delayDuration={0}>
@@ -183,58 +183,50 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen, isMobile, onNewCh
           }`}
         >
           {sidebarOpen && (
-            session?.user ? (
-              <div className="mt-8 h-full overflow-y-auto px-2 text-left">
-                <h2 className="px-2 text-base font-medium text-foreground mb-4 font-['Google_Sans']">
-                  Recent
-                </h2>
-                <div className="space-y-1">
-                  {sessions.length === 0 ? (
-                    <div className="px-2 py-1 text-sm text-muted-foreground">No chats yet</div>
-                  ) : (
-                    sessions.map((s) => (
-                      <button
-                        key={s.id}
-                        type="button"
-                        onClick={() => handleSelectSession(s.id)}
-                        className="w-full flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-sidebar-accent text-left"
-                        title={s.title}
-                      >
-                        <MessageSquare className="h-4 w-4 text-sidebar-foreground" />
-                        <span className="truncate text-sm">{s.title}</span>
-                      </button>
-                    ))
-                  )}
-                </div>
+            <div className="mt-8 h-full overflow-y-auto px-2 text-left">
+              <h2 className="px-2 text-base font-medium text-foreground mb-4 font-['Google_Sans']">
+                Recent
+              </h2>
+              {/* Recent chat sessions from localStorage */}
+              <div className="space-y-1">
+                {sessions.length === 0 && (
+                  <div className="px-2 py-1 text-sm text-muted-foreground">No chats yet</div>
+                )}
+                {sessions.map((s) => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => handleSelectSession(s.id)}
+                    className="w-full flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-sidebar-accent text-left"
+                    title={s.title}
+                  >
+                    <MessageSquare className="h-4 w-4 text-sidebar-foreground" />
+                    <span className="truncate text-sm">{s.title || "Untitled chat"}</span>
+                  </button>
+                ))}
               </div>
-            ) : (
-              <div className="p-4 text-center text-muted-foreground">
-                Sign in to access chat history
-              </div>
-            )
+            </div>
           )}
         </div>
 
         <div className="mt-auto flex flex-col items-center space-y-2">
           <Tooltip>
             <TooltipTrigger asChild>
-              <Link href="/settings" className="w-full">
-                <Button
-                  variant="ghost"
-                  className={`flex h-14 items-center rounded-full text-sidebar-foreground transition-all duration-300 hover:bg-sidebar-accent ${
-                    sidebarOpen
-                      ? "w-full justify-start px-4"
-                      : "w-14 justify-center px-0"
-                  }`}
-                >
-                  <Settings className="h-6 w-6" />
-                  {sidebarOpen && (
-                    <span className="ml-4 whitespace-nowrap font-['Google_Sans']">
-                      Settings
-                    </span>
-                  )}
-                </Button>
-              </Link>
+              <Button
+                variant="ghost"
+                className={`flex h-14 items-center rounded-full text-sidebar-foreground transition-all duration-300 hover:bg-sidebar-accent ${
+                  sidebarOpen
+                    ? "w-full justify-start px-4"
+                    : "w-14 justify-center px-0"
+                }`}
+              >
+                <Settings className="h-6 w-6" />
+                {sidebarOpen && (
+                  <span className="ml-4 whitespace-nowrap font-['Google_Sans']">
+                    Settings
+                  </span>
+                )}
+              </Button>
             </TooltipTrigger>
             {!sidebarOpen && (
               <TooltipContent side="right">

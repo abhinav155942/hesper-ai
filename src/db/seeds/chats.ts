@@ -2,41 +2,36 @@ import { db } from '@/db';
 import { chats } from '@/db/schema';
 
 async function main() {
-    const now = new Date();
-    const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-    const twoDaysAgo = new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000);
-    const threeDaysAgo = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
-
     const sampleChats = [
         {
             userId: '999',
-            title: 'Getting Started with AI Email Assistant',
-            createdAt: threeDaysAgo,
-            updatedAt: new Date(threeDaysAgo.getTime() + 2 * 60 * 60 * 1000),
+            title: 'Getting started with our platform',
+            createdAt: new Date('2024-12-18T10:30:00Z'),
+            updatedAt: new Date('2024-12-18T10:30:00Z'),
+        },
+        {
+            userId: 'test-user-123',
+            title: 'Technical support inquiry',
+            createdAt: new Date('2024-12-17T14:15:00Z'),
+            updatedAt: new Date('2024-12-19T09:45:00Z'),
+        },
+        {
+            userId: 'pro-test-user-456',
+            title: 'Billing and subscription questions',
+            createdAt: new Date('2024-12-16T16:20:00Z'),
+            updatedAt: new Date('2024-12-18T11:30:00Z'),
         },
         {
             userId: '999',
-            title: 'Technical Support - SMTP Configuration Issues',
-            createdAt: twoDaysAgo,
-            updatedAt: new Date(twoDaysAgo.getTime() + 45 * 60 * 1000),
+            title: 'Feature request discussion',
+            createdAt: new Date('2024-12-19T08:45:00Z'),
+            updatedAt: new Date('2024-12-19T08:45:00Z'),
         },
         {
-            userId: '999',
-            title: 'Billing Question - Upgrading to Pro Plan',
-            createdAt: new Date(twoDaysAgo.getTime() + 4 * 60 * 60 * 1000),
-            updatedAt: new Date(twoDaysAgo.getTime() + 5 * 60 * 60 * 1000),
-        },
-        {
-            userId: '999',
-            title: 'Feature Request - Custom Email Templates',
-            createdAt: oneDayAgo,
-            updatedAt: new Date(oneDayAgo.getTime() + 3 * 60 * 60 * 1000),
-        },
-        {
-            userId: '999',
-            title: 'API Integration Help - Webhook Setup',
-            createdAt: new Date(now.getTime() - 6 * 60 * 60 * 1000),
-            updatedAt: new Date(now.getTime() - 30 * 60 * 1000),
+            userId: 'test-user-123',
+            title: 'Integration help needed',
+            createdAt: new Date('2024-12-15T13:10:00Z'),
+            updatedAt: new Date('2024-12-19T15:20:00Z'),
         }
     ];
 
