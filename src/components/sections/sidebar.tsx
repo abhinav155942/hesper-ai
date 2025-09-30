@@ -12,6 +12,14 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface SidebarProps {
   sidebarOpen: boolean;
@@ -30,6 +38,7 @@ interface StoredSession {
 
 export default function Sidebar({ sidebarOpen, setSidebarOpen, isMobile, onNewChat, onSelectSession }: SidebarProps) {
   const [sessions, setSessions] = React.useState<StoredSession[]>([]);
+  const [deleteSessionId, setDeleteSessionId] = React.useState<string | null>(null);
 
   // Load sessions from localStorage
   React.useEffect(() => {
@@ -209,14 +218,7 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen, isMobile, onNewCh
                       className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
                       onClick={(e) => {
                         e.stopPropagation();
-                        if (confirm("Delete this chat?")) {
-                          const updated = sessions.filter(session => session.id !== s.id);
-                          setSessions(updated);
-                          try {
-                            localStorage.setItem("hesper_chat_sessions", JSON.stringify(updated));
-                            window.dispatchEvent(new CustomEvent("hesper:chat-sessions-updated"));
-                          } catch {}
-                        }
+                        setDeleteSessionId(s.id);
                       }}
                     >
                       <Trash2 className="h-3 w-3" />
@@ -225,6 +227,38 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen, isMobile, onNewCh
                   </div>
                 ))}
               </div>
+              
+              <Dialog open={deleteSessionId !== null} onOpenChange={() => setDeleteSessionId(null)}>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Delete Chat</DialogTitle>
+                    <DialogDescription>
+                      Are you sure you want to delete this chat? This action cannot be undone.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setDeleteSessionId(null)}>
+                      Cancel
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      onClick={() => {
+                        if (deleteSessionId) {
+                          const updated = sessions.filter(session => session.id !== deleteSessionId);
+                          setSessions(updated);
+                          try {
+                            localStorage.setItem("hesper_chat_sessions", JSON.stringify(updated));
+                            window.dispatchEvent(new CustomEvent("hesper:chat-sessions-updated"));
+                          } catch {}
+                        }
+                        setDeleteSessionId(null);
+                      }}
+                    >
+                      Delete
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
             </div>
           )}
         </div>
