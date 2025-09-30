@@ -18,23 +18,23 @@ interface Subscription {
 }
 
 const plans = [
-  {
-    id: "basic",
-    name: "Hesper 1.0v (Basic)",
-    price: "$14.99",
-    description: "100 credits/month, access to basic model features",
-    credits: "100 credits added",
-    apiPath: "basic",
-  },
-  {
-    id: "pro",
-    name: "Hesper Pro",
-    price: "$29.99",
-    description: "200 credits/month, 50 messages/day, advanced reasoning & research",
-    credits: "200 credits & 50 messages/day",
-    apiPath: "pro",
-  },
-] as const;
+{
+  id: "basic",
+  name: "Hesper 1.0v (Basic)",
+  price: "$14.99",
+  description: "100 credits/month, access to basic model features",
+  credits: "100 credits added",
+  apiPath: "basic"
+},
+{
+  id: "pro",
+  name: "Hesper Pro",
+  price: "$29.99",
+  description: "200 credits/month, 50 messages/day, advanced reasoning & research",
+  credits: "200 credits & 50 messages/day",
+  apiPath: "pro"
+}] as
+const;
 
 export default function SubscriptionsPage() {
   const { data: session, isPending: sessionLoading } = useSession();
@@ -48,7 +48,7 @@ export default function SubscriptionsPage() {
   const proPlanId = process.env.NEXT_PUBLIC_PAYPAL_PRO_PLAN_ID as string | undefined;
   const planIdMap: Record<string, string | undefined> = {
     basic: basicPlanId,
-    pro: proPlanId,
+    pro: proPlanId
   };
   const subscriptionsEnabled = !!(basicPlanId || proPlanId);
 
@@ -69,7 +69,7 @@ export default function SubscriptionsPage() {
   }, [sessionLoading]);
 
   const fetchSubscription = async () => {
-    if (!session?.user) { setLoading(false); return; }
+    if (!session?.user) {setLoading(false);return;}
     try {
       const token = localStorage.getItem("bearer_token");
       const res = await fetch("/api/user/subscription", {
@@ -80,7 +80,7 @@ export default function SubscriptionsPage() {
         // Map API response { subscriptionPlan, subscriptionExpiry } -> { plan, expiry }
         setSubscription({
           plan: (data.subscriptionPlan ?? data.plan ?? "free") as Subscription["plan"],
-          expiry: data.subscriptionExpiry ?? data.expiry ?? null,
+          expiry: data.subscriptionExpiry ?? data.expiry ?? null
         });
       }
     } catch (err) {
@@ -132,9 +132,9 @@ export default function SubscriptionsPage() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify({ orderID: data.orderID }),
+        body: JSON.stringify({ orderID: data.orderID })
       });
       console.log("[PayPal] Approved order:", data?.orderID);
       if (!res.ok) {
@@ -163,9 +163,9 @@ export default function SubscriptionsPage() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify({ subscriptionID: data.subscriptionID }),
+        body: JSON.stringify({ subscriptionID: data.subscriptionID })
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
@@ -183,8 +183,8 @@ export default function SubscriptionsPage() {
     return (
       <div className="container py-10 flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    );
+      </div>);
+
   }
 
   const currentPlan = subscription?.plan || "free";
@@ -198,41 +198,41 @@ export default function SubscriptionsPage() {
         <div className="text-center">
           <h1 className="text-3xl font-heading-medium">Choose Your Plan</h1>
           <p className="text-muted-foreground mt-2">Upgrade to access more features and credits.</p>
-          {subscription && (
-            <Badge variant={currentPlan === "free" ? "secondary" : "default"} className="mt-4">
+          {subscription &&
+          <Badge variant={currentPlan === "free" ? "secondary" : "default"} className="mt-4">
               Current Plan: {currentPlan.toUpperCase()} {isExpired && "(Expired)"}
               {subscription.expiry && ` (Expires: ${new Date(subscription.expiry).toLocaleDateString()})`}
             </Badge>
-          )}
-          {!paypalClientId && session?.user && (
-            <div className="mt-4 text-xs text-amber-600">
+          }
+          {!paypalClientId && session?.user &&
+          <div className="mt-4 text-xs text-amber-600">
               Sandbox mode: using demo PayPal client. Add NEXT_PUBLIC_PAYPAL_CLIENT_ID for live buttons.
             </div>
-          )}
+          }
         </div>
 
-        {showPayPal ? (
-          <PayPalScriptProvider
-            key={`${effectiveClientId}-${subscriptionsEnabled ? "sub" : "order"}`}
-            options={{
-              "client-id": effectiveClientId!,
-              currency: "USD",
-              components: "buttons",
-              intent: subscriptionsEnabled ? ("subscription" as const) : ("capture" as const),
-              vault: subscriptionsEnabled ? true : undefined,
-            }}
-          >
+        {showPayPal ?
+        <PayPalScriptProvider
+          key={`${effectiveClientId}-${subscriptionsEnabled ? "sub" : "order"}`}
+          options={{
+            "client-id": effectiveClientId!,
+            currency: "USD",
+            components: "buttons",
+            intent: subscriptionsEnabled ? "subscription" as const : "capture" as const,
+            vault: subscriptionsEnabled ? true : undefined
+          }}>
+
             <div className="grid md:grid-cols-2 gap-6">
               {plans.map((plan) => {
-                const isCurrent = currentPlan === plan.id && !isExpired;
-                const planId = planIdMap[plan.id];
-                return (
-                  <Card key={plan.id} className="relative">
-                    {isCurrent && (
-                      <div className="absolute top-4 right-4">
+              const isCurrent = currentPlan === plan.id && !isExpired;
+              const planId = planIdMap[plan.id];
+              return (
+                <Card key={plan.id} className="relative">
+                    {isCurrent &&
+                  <div className="absolute top-4 right-4">
                         <Badge variant="secondary">Current Plan</Badge>
                       </div>
-                    )}
+                  }
                     <CardHeader>
                       <CardTitle className="text-2xl">{plan.name}</CardTitle>
                       <CardDescription>{plan.description}</CardDescription>
@@ -253,50 +253,50 @@ export default function SubscriptionsPage() {
                           <span>•</span> Monthly renewal
                         </li>
                       </ul>
-                      {isCurrent ? (
-                        <Button variant="outline" className="w-full" disabled>
+                      {isCurrent ?
+                    <Button variant="outline" className="w-full" disabled>
                           Current Plan
-                        </Button>
-                      ) : subscriptionsEnabled && planId ? (
-                        <PayPalButtons
-                          createSubscription={(data, actions) => {
-                            return actions.subscription!.create({ plan_id: planId });
-                          }}
-                          onApprove={(data) => onApproveSubscription(data, plan.apiPath)}
-                          onError={(err) => {
-                            console.error("[PayPal] Subscription error:", err);
-                            toast.error("PayPal subscription error. See console for details.");
-                          }}
-                          style={{ layout: "horizontal" }}
-                        />
-                      ) : (
-                        <PayPalButtons
-                          createOrder={() => createOrder(plan.apiPath)}
-                          onApprove={(data) => onApprove(data, plan.apiPath)}
-                          onError={(err) => {
-                            console.error("[PayPal] Buttons error:", err, { orderId });
-                            toast.error("PayPal error. Please check console for details.");
-                          }}
-                          style={{ layout: "horizontal" }}
-                        />
-                      )}
+                        </Button> :
+                    subscriptionsEnabled && planId ?
+                    <PayPalButtons
+                      createSubscription={(data, actions) => {
+                        return actions.subscription!.create({ plan_id: planId });
+                      }}
+                      onApprove={(data) => onApproveSubscription(data, plan.apiPath)}
+                      onError={(err) => {
+                        console.error("[PayPal] Subscription error:", err);
+                        toast.error("PayPal subscription error. See console for details.");
+                      }}
+                      style={{ layout: "horizontal" }} /> :
+
+
+                    <PayPalButtons
+                      createOrder={() => createOrder(plan.apiPath)}
+                      onApprove={(data) => onApprove(data, plan.apiPath)}
+                      onError={(err) => {
+                        console.error("[PayPal] Buttons error:", err, { orderId });
+                        toast.error("PayPal error. Please check console for details.");
+                      }}
+                      style={{ layout: "horizontal" }} />
+
+                    }
                     </CardContent>
-                  </Card>
-                );
-              })}
+                  </Card>);
+
+            })}
             </div>
-          </PayPalScriptProvider>
-        ) : (
-          <div className="grid md:grid-cols-2 gap-6">
+          </PayPalScriptProvider> :
+
+        <div className="grid md:grid-cols-2 gap-6">
             {plans.map((plan) => {
-              const isCurrent = currentPlan === plan.id && !isExpired;
-              return (
-                <Card key={plan.id} className="relative">
-                  {isCurrent && (
-                    <div className="absolute top-4 right-4">
+            const isCurrent = currentPlan === plan.id && !isExpired;
+            return (
+              <Card key={plan.id} className="relative">
+                  {isCurrent &&
+                <div className="absolute top-4 right-4">
                       <Badge variant="secondary">Current Plan</Badge>
                     </div>
-                  )}
+                }
                   <CardHeader>
                     <CardTitle className="text-2xl">{plan.name}</CardTitle>
                     <CardDescription>{plan.description}</CardDescription>
@@ -317,28 +317,28 @@ export default function SubscriptionsPage() {
                         <span>•</span> Monthly renewal
                       </li>
                     </ul>
-                    {isCurrent ? (
-                      <Button variant="outline" className="w-full" disabled>
+                    {isCurrent ?
+                  <Button variant="outline" className="w-full" disabled>
                         Current Plan
-                      </Button>
-                    ) : !session?.user ? (
-                      <Button
-                        className="w-full"
-                        onClick={() => router.push("/sign-in?redirect=/subscriptions")}
-                      >
+                      </Button> :
+                  !session?.user ?
+                  <Button
+                    className="w-full"
+                    onClick={() => router.push("/sign-in?redirect=/subscriptions")}>
+
                         Sign in to subscribe
-                      </Button>
-                    ) : (
-                      <Button className="w-full" variant="secondary" disabled>
+                      </Button> :
+
+                  <Button className="w-full" variant="secondary" disabled>
                         Loading payments...
                       </Button>
-                    )}
+                  }
                   </CardContent>
-                </Card>
-              );
-            })}
+                </Card>);
+
+          })}
           </div>
-        )}
+        }
 
         <div className="text-center text-sm text-muted-foreground">
           <p>Already subscribed?{" "}
@@ -381,7 +381,7 @@ export default function SubscriptionsPage() {
                   </TableRow>
                   <TableRow>
                     <TableCell><Badge>Basic</Badge></TableCell>
-                    <TableCell>100 credits/month, basic model access</TableCell>
+                    <TableCell>100 credits/month, including hesper 1.0v </TableCell>
                     <TableCell>1 credit per message</TableCell>
                     <TableCell>None</TableCell>
                     <TableCell>
@@ -392,7 +392,7 @@ export default function SubscriptionsPage() {
                   </TableRow>
                   <TableRow>
                     <TableCell><Badge>Pro</Badge></TableCell>
-                    <TableCell>200 credits/month, advanced features, 50 messages/day</TableCell>
+                    <TableCell className="!whitespace-pre-line">200 credits/month, advanced features including Hesper pro, 50 messages/day</TableCell>
                     <TableCell>1 credit per message</TableCell>
                     <TableCell>50 messages/day (resets at midnight)</TableCell>
                     <TableCell>
@@ -410,6 +410,6 @@ export default function SubscriptionsPage() {
           </CardContent>
         </Card>
       </div>
-    </div>
-  );
+    </div>);
+
 }
