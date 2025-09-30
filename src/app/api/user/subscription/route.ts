@@ -15,7 +15,9 @@ export async function GET(request: NextRequest) {
 
     const userRecord = await db.select({
       subscriptionPlan: user.subscriptionPlan,
-      subscriptionExpiry: user.subscriptionExpiry
+      subscriptionExpiry: user.subscriptionExpiry,
+      credits: user.credits,
+      dailyMessages: user.dailyMessages
     })
     .from(user)
     .where(eq(user.id, currentUser.id))
@@ -29,7 +31,9 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       subscriptionPlan: userRecord[0].subscriptionPlan,
-      subscriptionExpiry: userRecord[0].subscriptionExpiry
+      subscriptionExpiry: userRecord[0].subscriptionExpiry,
+      credits: userRecord[0].credits,
+      dailyMessages: userRecord[0].dailyMessages
     });
 
   } catch (error) {

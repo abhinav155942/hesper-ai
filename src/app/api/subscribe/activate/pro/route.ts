@@ -40,7 +40,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Calculate updates for PRO plan (do not change credits here; plan is unlimited)
+    // Calculate updates for PRO plan
+    const currentCredits = userRow.credits || 0;
+    const newCredits = currentCredits + 200; // Pro adds 200 credits per cycle
     const subscriptionExpiry = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
     const [updated] = await db
@@ -48,6 +50,7 @@ export async function POST(request: NextRequest) {
       .set({
         subscriptionPlan: "pro",
         subscriptionExpiry,
+        credits: newCredits,
         updatedAt: new Date(),
       })
       .where(eq(user.id, currentUser.id))
@@ -67,7 +70,7 @@ export async function POST(request: NextRequest) {
         subscription: {
           plan: "pro",
           expiry: subscriptionExpiry.toISOString(),
-          credits: updated.credits ?? null,
+          credits: newCredits,
         },
         subscriptionID,
       },

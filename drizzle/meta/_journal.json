@@ -64,6 +64,13 @@
       "when": 1759158687337,
       "tag": "0008_complex_swarm",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1759204823731,
+      "tag": "0009_adorable_supernaut",
+      "breakpoints": true
     }
   ]
 }

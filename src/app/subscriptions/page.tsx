@@ -29,8 +29,8 @@ const plans = [
     id: "pro",
     name: "Hesper Pro",
     price: "$29.99",
-    description: "Unlimited credits, advanced reasoning & research",
-    credits: "Unlimited credits",
+    description: "200 credits/month, 50 messages/day, advanced reasoning & research",
+    credits: "200 credits & 50 messages/day",
     apiPath: "pro",
   },
 ] as const;

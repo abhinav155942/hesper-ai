@@ -2,6 +2,9 @@ import { NextRequest } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { getSettingsKeyValueLines } from "@/lib/settings-helpers";
 import { getUserSettingsJson } from "@/lib/settings-helpers";
+import { db } from "@/db";
+import { user } from "@/db/schema";
+import { eq, and, gte } from "drizzle-orm";
 
 const N8N_WEBHOOK_URL = "https://abhinavt333.app.n8n.cloud/webhook/f36d4e7e-9b5a-4834-adb7-cf088808c191/chat";
 
@@ -23,8 +26,8 @@ export async function POST(req: NextRequest) {
     }
 
     // Auth user (to fetch per-user settings context)
-    const user = await getCurrentUser(req);
-    const userId = user?.id ? String(user.id) : "anon";
+    const currentUser = await getCurrentUser(req);
+    const userId = currentUser?.id ? String(currentUser.id) : "anon";
 
     const key = `${message.trim()}|${String(model)}|${userId}`;
 
@@ -51,8 +54,8 @@ export async function POST(req: NextRequest) {
       // Build JSON context from all current settings
       let settings: any = {};
       try {
-        if (user?.id) {
-          settings = await getUserSettingsJson(String(user.id));
+        if (currentUser?.id) {
+          settings = await getUserSettingsJson(String(currentUser.id));
         }
       } catch {}
 
@@ -97,25 +100,127 @@ export async function POST(req: NextRequest) {
         settings: fullSettings,
       };
 
-      // Send as JSON to n8n
-      const upstream = await fetch(N8N_WEBHOOK_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-        // Prevent intermediary caches and proxies from retrying
-        cache: "no-store",
-      });
+      // Check daily message limit and credit deduction for authenticated users
+      if (currentUser?.id) {
+        const userRecord = await db.select({
+          credits: user.credits,
+          subscriptionPlan: user.subscriptionPlan,
+          dailyMessages: user.dailyMessages,
+          lastResetDate: user.lastResetDate
+        })
+          .from(user)
+          .where(eq(user.id, userId))
+          .limit(1);
 
-      const contentType = upstream.headers.get("content-type") || "text/plain";
-      const status = upstream.status;
-      const text = await upstream.text();
+        if (userRecord.length === 0) {
+          return Response.json({ error: "User not found" }, { status: 404 });
+        }
 
-      const data = { text, status, contentType };
-      // Set short cache window to absorb immediate duplicates
-      cache.set(key, { data, expires: Date.now() + CACHE_TTL_MS });
-      return data;
+        const userData = userRecord[0];
+        const currentCredits = userData.credits ?? 0;
+        const subscriptionPlan = userData.subscriptionPlan || 'free';
+        let dailyMessages = userData.dailyMessages ?? 0;
+        const lastResetDate = userData.lastResetDate;
+
+        // Handle daily message limit for pro users
+        if (subscriptionPlan === 'pro') {
+          const today = new Date().toDateString();
+          
+          // Reset daily messages if it's a new day
+          if (lastResetDate !== today) {
+            dailyMessages = 0;
+            await db.update(user)
+              .set({ 
+                dailyMessages: 0, 
+                lastResetDate: today,
+                updatedAt: new Date() 
+              })
+              .where(eq(user.id, userId));
+          }
+
+          // Check daily limit for pro users
+          if (dailyMessages >= 50) {
+            return Response.json({ 
+              error: "Daily message limit of 50 reached for Pro plan. Upgrade or wait for reset." 
+            }, { status: 402 });
+          }
+        }
+
+        // Check credits for non-pro plans or if pro user still has credits
+        if (subscriptionPlan !== 'pro' || currentCredits > 0) {
+          if (currentCredits < 1) {
+            return Response.json({ 
+              error: "Insufficient credits for this request", 
+              credits: currentCredits 
+            }, { status: 402 });
+          }
+        }
+
+        // Call N8N...
+        const upstream = await fetch(N8N_WEBHOOK_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+          // Prevent intermediary caches and proxies from retrying
+          cache: "no-store",
+        });
+
+        const contentType = upstream.headers.get("content-type") || "text/plain";
+        let status = upstream.status;
+        let text = await upstream.text();
+
+        if (upstream.ok) {
+          // Update user after successful response
+          const updates: any = {
+            updatedAt: new Date()
+          };
+
+          // Increment daily messages for pro users
+          if (subscriptionPlan === 'pro') {
+            updates.dailyMessages = dailyMessages + 1;
+          }
+
+          // Deduct credit for credit-based plans if they have credits
+          if (subscriptionPlan !== 'pro' && currentCredits > 0) {
+            updates.credits = currentCredits - 1;
+          } else if (subscriptionPlan === 'pro' && currentCredits > 0) {
+            // Pro users with credits still get credit deduction
+            updates.credits = currentCredits - 1;
+          }
+
+          await db.update(user)
+            .set(updates)
+            .where(eq(user.id, userId))
+            .execute();
+        }
+
+        const data = { text, status, contentType };
+        // Set short cache window to absorb immediate duplicates
+        cache.set(key, { data, expires: now + CACHE_TTL_MS });
+        return data;
+      } else {
+        // Unauth flow
+        const upstream = await fetch(N8N_WEBHOOK_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+          // Prevent intermediary caches and proxies from retrying
+          cache: "no-store",
+        });
+
+        const contentType = upstream.headers.get("content-type") || "text/plain";
+        const status = upstream.status;
+        const text = await upstream.text();
+
+        const data = { text, status, contentType };
+        // Set short cache window to absorb immediate duplicates
+        cache.set(key, { data, expires: now + CACHE_TTL_MS });
+        return data;
+      }
     })();
 
     pending.set(key, exec);
