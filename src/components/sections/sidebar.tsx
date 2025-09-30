@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Menu, Plus, Settings, Info, Smartphone, CreditCard, Building, MessageSquare } from "lucide-react";
+import { Menu, Plus, Settings, Info, Smartphone, CreditCard, Building, MessageSquare, Trash2 } from "lucide-react";
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
@@ -193,16 +193,36 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen, isMobile, onNewCh
                   <div className="px-2 py-1 text-sm text-muted-foreground">No chats yet</div>
                 )}
                 {sessions.map((s) => (
-                  <button
-                    key={s.id}
-                    type="button"
-                    onClick={() => handleSelectSession(s.id)}
-                    className="w-full flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-sidebar-accent text-left"
-                    title={s.title}
-                  >
-                    <MessageSquare className="h-4 w-4 text-sidebar-foreground" />
-                    <span className="truncate text-sm">{s.title || "Untitled chat"}</span>
-                  </button>
+                  <div key={s.id} className="relative group">
+                    <button
+                      type="button"
+                      onClick={() => handleSelectSession(s.id)}
+                      className="w-full flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-sidebar-accent text-left"
+                      title={s.title}
+                    >
+                      <MessageSquare className="h-4 w-4 text-sidebar-foreground flex-shrink-0" />
+                      <span className="truncate text-sm flex-1">{s.title || "Untitled chat"}</span>
+                    </button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (confirm("Delete this chat?")) {
+                          const updated = sessions.filter(session => session.id !== s.id);
+                          setSessions(updated);
+                          try {
+                            localStorage.setItem("hesper_chat_sessions", JSON.stringify(updated));
+                            window.dispatchEvent(new CustomEvent("hesper:chat-sessions-updated"));
+                          } catch {}
+                        }
+                      }}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                      <span className="sr-only">Delete chat</span>
+                    </Button>
+                  </div>
                 ))}
               </div>
             </div>
