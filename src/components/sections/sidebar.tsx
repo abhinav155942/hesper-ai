@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Menu, Plus, Settings, Info, Smartphone, CreditCard, Building } from "lucide-react";
+import { Menu, Plus, Settings, Info, Smartphone, CreditCard, Building, MessageSquare } from "lucide-react";
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
@@ -18,9 +18,52 @@ interface SidebarProps {
   setSidebarOpen: (open: boolean) => void;
   isMobile: boolean;
   onNewChat?: () => void;
+  onSelectSession?: (id: string) => void; // optional callback when selecting a chat
 }
 
-export default function Sidebar({ sidebarOpen, setSidebarOpen, isMobile, onNewChat }: SidebarProps) {
+// Lightweight type for stored sessions in localStorage
+interface StoredSession {
+  id: string;
+  title: string;
+  lastUpdated: number;
+}
+
+export default function Sidebar({ sidebarOpen, setSidebarOpen, isMobile, onNewChat, onSelectSession }: SidebarProps) {
+  const [sessions, setSessions] = React.useState<StoredSession[]>([]);
+
+  // Load sessions from localStorage
+  React.useEffect(() => {
+    const load = () => {
+      if (typeof window === "undefined") return;
+      try {
+        const raw = localStorage.getItem("hesper_chat_sessions");
+        const list: StoredSession[] = raw ? JSON.parse(raw) : [];
+        setSessions(Array.isArray(list) ? list : []);
+      } catch {
+        setSessions([]);
+      }
+    };
+    load();
+
+    // Listen to updates emitted by chat interface
+    const handler = () => load();
+    window.addEventListener("hesper:chat-sessions-updated", handler as any);
+    return () => window.removeEventListener("hesper:chat-sessions-updated", handler as any);
+  }, []);
+
+  const handleSelectSession = (id: string) => {
+    // Notify parent if provided
+    onSelectSession?.(id);
+    // Also drop a hint key for other components if they want to pick it up
+    try {
+      localStorage.setItem("hesper_selected_session_id", id);
+      // Optional broadcast
+      window.dispatchEvent(new CustomEvent("hesper:chat-session-selected", { detail: { id } }));
+    } catch {}
+    // On mobile, collapse sidebar
+    if (isMobile) setSidebarOpen(false);
+  };
+
   let sidebarClasses = "bg-card p-2 transition-all duration-300 ease-in-out overflow-y-auto";
   const hClasses = isMobile ? "h-screen" : "h-full";
   const wClasses = sidebarOpen ? (isMobile ? "w-full" : "w-[280px]") : "w-[72px]";
@@ -144,6 +187,24 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen, isMobile, onNewCh
               <h2 className="px-2 text-base font-medium text-foreground mb-4 font-['Google_Sans']">
                 Recent
               </h2>
+              {/* Recent chat sessions from localStorage */}
+              <div className="space-y-1">
+                {sessions.length === 0 && (
+                  <div className="px-2 py-1 text-sm text-muted-foreground">No chats yet</div>
+                )}
+                {sessions.map((s) => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => handleSelectSession(s.id)}
+                    className="w-full flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-sidebar-accent text-left"
+                    title={s.title}
+                  >
+                    <MessageSquare className="h-4 w-4 text-sidebar-foreground" />
+                    <span className="truncate text-sm">{s.title || "Untitled chat"}</span>
+                  </button>
+                ))}
+              </div>
             </div>
           )}
         </div>

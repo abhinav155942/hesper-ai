@@ -156,28 +156,31 @@ export async function getUserSettingsJson(userId: string): Promise<any> {
     const emailFormat = emailFormatResult[0] || null;
     const businessIntroData = businessIntroResult[0] || null;
 
-    // Split subject_templates by comma or newline if it's a string
-    const subjectTemplatesArray = emailFormat?.subjectTemplates 
-      ? emailFormat.subjectTemplates.split(/[,|\n]+/).map(s => s.trim()).filter(Boolean) 
-      : [];
+    // Split subject_templates only if exists
+    let subjectTemplatesArray = null;
+    if (emailFormat?.subjectTemplates) {
+      subjectTemplatesArray = emailFormat.subjectTemplates.split(/[,|\n]+/).map(s => s.trim()).filter(Boolean);
+    }
 
     return {
-      business_intro: businessIntroData?.businessIntro || "",
-      pros: businessProsResult.map((p: any) => p.value),
-      differences: businessDifferencesResult.map((d: any) => d.value),
-      email_format: emailFormat?.emailFormat || "",
+      business_intro: businessIntroData?.businessIntro ?? null,
+      pros: businessProsResult.length > 0 ? businessProsResult.map((p: any) => p.value) : null,
+      differences: businessDifferencesResult.length > 0 ? businessDifferencesResult.map((d: any) => d.value) : null,
+      email_format: emailFormat?.emailFormat ?? null,
       smtp: smtp ? {
-        host: smtp.smtpHost || "",
-        port: smtp.smtpPort || 587,
-        username: smtp.smtpUsername || "",
-        password: smtp.smtpPassword || ""
+        host: smtp.smtpHost ?? null,
+        port: smtp.smtpPort ?? null,
+        username: smtp.smtpUsername ?? null,
+        password: smtp.smtpPassword ?? null,
+        client_hostname: smtp.clientHostname ?? null,
+        ssl_tls_enabled: smtp.sslTlsEnabled ?? null
       } : null,
-      email_tone: emailFormat?.emailTone || "",
-      email_description: emailFormat?.emailDescription || "",
-      email_signature: emailFormat?.emailSignature || "",
+      email_tone: emailFormat?.emailTone ?? null,
+      email_description: emailFormat?.emailDescription ?? null,
+      email_signature: emailFormat?.emailSignature ?? null,
       subject_templates: subjectTemplatesArray,
-      user_name: businessIntroData?.userName || "",
-      business_description: businessIntroData?.businessDescription || ""
+      user_name: businessIntroData?.userName ?? null,
+      business_description: businessIntroData?.businessDescription ?? null
     };
   } catch (error) {
     console.error('Error fetching settings as JSON:', error);

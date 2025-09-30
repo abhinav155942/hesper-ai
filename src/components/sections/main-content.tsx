@@ -11,13 +11,17 @@ interface MainContentProps {
   chatMode?: boolean;
   onChatModeChange?: (mode: boolean) => void;
   chatKey?: number;
+  currentSessionId?: string;
+  onLoadSession?: (id: string) => void;
 }
 
 export default function MainContent({
   selectedModel = 'hesper-1.0v',
   chatMode: externalChatMode,
   onChatModeChange,
-  chatKey
+  chatKey,
+  currentSessionId,
+  onLoadSession
 }: MainContentProps) {
   const [internalChatMode, setInternalChatMode] = useState(externalChatMode || false);
   const [inputValue, setInputValue] = useState("");
@@ -139,7 +143,10 @@ export default function MainContent({
         <ChatInterface
           selectedModel={selectedModel}
           onBack={() => setChatMode(false)}
-          initialMessage={inputValue} />
+          initialMessage={inputValue}
+          currentSessionId={currentSessionId}
+          onLoadSession={onLoadSession}
+        />
       </div>);
 
   }
