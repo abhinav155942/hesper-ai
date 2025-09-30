@@ -1,6 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Header from "@/components/sections/header";
+import Sidebar from "@/components/sections/sidebar";
+import MainContent from "@/components/sections/main-content";
 
 /**
  * Home page client component
