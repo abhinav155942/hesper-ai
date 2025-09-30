@@ -5,6 +5,7 @@ import { useState, useEffect, useRef } from "react";
 import { Mic } from 'lucide-react';
 import { toast } from "sonner";
 import ChatInterface from "@/components/chat/chat-interface";
+import Link from "next/link";
 
 interface MainContentProps {
   selectedModel?: 'hesper-1.0v' | 'hesper-pro';
@@ -188,6 +189,10 @@ export default function MainContent({
               </div>
             </form>
           </div>
+
+          <Link href="/live-voice" className="inline-flex items-center justify-center px-6 py-3 bg-primary text-primary-foreground rounded-full text-sm font-medium hover:bg-primary/90 transition-colors max-w-[200px]">
+            Live Talk
+          </Link>
 
         </div>
       </div>
