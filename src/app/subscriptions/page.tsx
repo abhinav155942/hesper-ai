@@ -372,7 +372,7 @@ export default function SubscriptionsPage() {
                     <TableCell><Badge variant="secondary">Free</Badge></TableCell>
                     <TableCell>Limited access to basic features</TableCell>
                     <TableCell>1 credit per message</TableCell>
-                    <TableCell>None</TableCell>
+                    <TableCell>None, limited messages for free account</TableCell>
                     <TableCell>
                       <Link href="/checkout" className="text-primary hover:underline">
                         Buy credits via PayPal
@@ -383,7 +383,7 @@ export default function SubscriptionsPage() {
                     <TableCell><Badge>Basic</Badge></TableCell>
                     <TableCell className="!whitespace-pre-line">100 credits/month, including hesper 1.0v </TableCell>
                     <TableCell>1 credit per message</TableCell>
-                    <TableCell>30 messages/day (resets at midnight)</TableCell>
+                    <TableCell className="!whitespace-pre-line">30 messages/day (resets at midnight)</TableCell>
                     <TableCell>
                       <Link href="/checkout" className="text-primary hover:underline">
                         Buy extra credits via PayPal
