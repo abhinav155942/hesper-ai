@@ -620,7 +620,7 @@ I'm here to help with a wide range of tasks including answering questions, helpi
       {/* Messages Area */}
       <div
         ref={scrollContainerRef}
-        className="flex-1 overflow-y-auto p-2 pb-1 scroll-smooth scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent"
+        className="flex-1 overflow-y-auto p-2 pb-1 scroll-smooth scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent bg-slate-50"
         role="log"
         aria-live="polite">
         
@@ -709,7 +709,7 @@ I'm here to help with a wide range of tasks including answering questions, helpi
                         </div>
                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
                            {leads.map((lead, i) =>
-                      <div key={i} className="rounded-lg border border-border bg-card p-3">
+                      <div key={i} className="rounded-lg border border-border bg-slate-50 p-3">
                                {lead.name && <div className="font-medium text-sm mb-1">{lead.name}</div>}
                                <div className="space-y-1 text-sm">
                                  {lead.email &&
@@ -736,10 +736,10 @@ I'm here to help with a wide range of tasks including answering questions, helpi
 
               // Fallback: plain text content
               return (
-                <div className="whitespace-pre-wrap text-sm leading-relaxed !text-black !bg-white !shadow-none !border-double break-words">
-                      {message.content}
-                    </div>);
-
+                <div className="whitespace-pre-wrap text-sm leading-relaxed text-foreground bg-slate-50 p-3 rounded-lg border border-border">
+                  {message.content}
+                </div>
+              );
             })()
             }
             </div>
