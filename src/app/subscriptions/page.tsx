@@ -381,9 +381,9 @@ export default function SubscriptionsPage() {
                   </TableRow>
                   <TableRow>
                     <TableCell><Badge>Basic</Badge></TableCell>
-                    <TableCell>100 credits/month, including hesper 1.0v </TableCell>
+                    <TableCell className="!whitespace-pre-line">100 credits/month, including hesper 1.0v </TableCell>
                     <TableCell>1 credit per message</TableCell>
-                    <TableCell>None</TableCell>
+                    <TableCell>30 messages/day (resets at midnight)</TableCell>
                     <TableCell>
                       <Link href="/checkout" className="text-primary hover:underline">
                         Buy extra credits via PayPal
