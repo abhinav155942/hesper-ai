@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { ChevronDown, Zap, Brain, Crown, Menu } from "lucide-react";
+import { ChevronDown, Zap, Brain, Crown, Menu, Mic } from "lucide-react";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
@@ -9,7 +9,11 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuTrigger } from
+  DropdownMenuTrigger,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger
+} from
 "@/components/ui/dropdown-menu";
 import { useSession, signOut } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
@@ -233,6 +237,20 @@ const Header = ({ onMenuClick, selectedModel, onModelChange }: HeaderProps) => {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+
+      {isVoiceMode && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className="flex items-center gap-1 text-xs text-blue-500 animate-pulse">
+              <Mic className="h-4 w-4" />
+              <span className="hidden md:inline">Voice Mode Active</span>
+            </div>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>You are in voice mode</p>
+          </TooltipContent>
+        </Tooltip>
+      )}
 
       <div className="flex items-center gap-1 md:gap-2 lg:gap-3 xl:gap-6">
         <Link

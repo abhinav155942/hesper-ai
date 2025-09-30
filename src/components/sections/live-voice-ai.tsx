@@ -1,6 +1,6 @@
 import * as React from "react";
 import { useState, useRef, useEffect } from "react";
-import { Mic, X } from "lucide-react";
+import { Mic, X, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 interface LiveVoiceAIProps {
@@ -12,9 +12,14 @@ export default function LiveVoiceAI({ onBack }: LiveVoiceAIProps) {
   const [isConnected, setIsConnected] = useState(false);
   const [transcript, setTranscript] = useState("");
   const [response, setResponse] = useState("");
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const [isResponding, setIsResponding] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const processorRef = useRef<ScriptProcessorNode | null>(null);
+  const inputRef = useRef<MediaStreamAudioSourceNode | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const audioQueueRef = useRef<Uint8Array[]>([]); // Queue for audio chunks
+  const audioSourceRef = useRef<AudioBufferSourceNode | null>(null);
 
   useEffect(() => {
     const ws = new WebSocket("ws://localhost:3000/api/voice/chat");
@@ -28,6 +33,10 @@ export default function LiveVoiceAI({ onBack }: LiveVoiceAIProps) {
     ws.onclose = () => {
       setIsConnected(false);
       toast.error("Disconnected from voice chat");
+      // Clean up audio context on disconnect
+      if (audioContextRef.current) {
+        audioContextRef.current.close();
+      }
     };
 
     ws.onerror = (error) => {
@@ -36,75 +45,152 @@ export default function LiveVoiceAI({ onBack }: LiveVoiceAIProps) {
     };
 
     ws.onmessage = (event) => {
-      // Handle incoming messages: could be STT transcript or TTS audio
-      try {
-        const data = JSON.parse(event.data);
-        if (data.type === "transcript") {
-          setTranscript(data.text);
-        } else if (data.type === "response") {
-          setResponse(data.text);
-          // Handle audio if sent
-          if (data.audio) {
-            const audioBlob = new Blob([data.audio], { type: "audio/wav" });
-            const audioUrl = URL.createObjectURL(audioBlob);
-            const audio = new Audio(audioUrl);
-            audio.play();
+      if (typeof event.data === 'string') {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type === "transcript" && data.source === "ai") {
+            setResponse(data.text);
+            setIsResponding(false);
+          } else if (data.type === "response-end") {
+            setIsResponding(false);
+          } else if (data.type === "error") {
+            toast.error(data.message);
+            setIsResponding(false);
           }
+        } catch (err) {
+          console.error('Parse error:', err);
+          setIsResponding(false);
         }
-      } catch (err) {
-        // If not JSON, might be binary audio
-        const audioBlob = new Blob([event.data], { type: "audio/wav" });
-        const audioUrl = URL.createObjectURL(audioBlob);
-        const audio = new Audio(audioUrl);
-        audio.play();
+      } else {
+        // Binary PCM audio chunk from server (16-bit, 16000Hz, mono)
+        const pcmData = new Uint8Array(event.data);
+        audioQueueRef.current.push(pcmData);
       }
     };
 
     return () => {
       ws.close();
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+      }
+      if (audioContextRef.current) {
+        audioContextRef.current.close();
+      }
+      // Clear queue
+      audioQueueRef.current = [];
     };
   }, []);
 
   const startRecording = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      mediaRecorderRef.current = new MediaRecorder(stream, {
-        mimeType: "audio/webm;codecs=opus"
+      streamRef.current = await navigator.mediaDevices.getUserMedia({ 
+        audio: {
+          sampleRate: 16000,
+          channelCount: 1,
+          echoCancellation: true,
+          noiseSuppression: true
+        }
       });
 
-      mediaRecorderRef.current.ondataavailable = (event) => {
-        if (event.data.size > 0 && wsRef.current?.readyState === WebSocket.OPEN) {
-          event.data.arrayBuffer().then(buffer => {
-            wsRef.current?.send(JSON.stringify({
-              type: "audio",
-              data: Array.from(new Uint8Array(buffer))
-            }));
-          });
+      audioContextRef.current = new AudioContext({ sampleRate: 16000 });
+      const audioContext = audioContextRef.current;
+      
+      inputRef.current = audioContext.createMediaStreamSource(streamRef.current);
+      processorRef.current = audioContext.createScriptProcessor(4096, 1, 1);
+
+      processorRef.current.onaudioprocess = (e) => {
+        const inputBuffer = e.inputBuffer.getChannelData(0);
+        if (wsRef.current?.readyState === WebSocket.OPEN && isRecording) {
+          const pcmData = new Float32Array(inputBuffer);
+          // Convert to 16-bit PCM
+          const int16Data = new Int16Array(pcmData.length);
+          for (let i = 0; i < pcmData.length; i++) {
+            let sample = pcmData[i] * 0x7FFF;
+            if (sample < -0x8000) sample = -0x8000;
+            if (sample > 0x7FFF) sample = 0x7FFF;
+            int16Data[i] = sample;
+          }
+          wsRef.current.send(int16Data.buffer);
         }
       };
 
-      mediaRecorderRef.current.onstop = () => {
-        stream.getTracks().forEach(track => track.stop());
-      };
+      inputRef.current.connect(processorRef.current);
+      processorRef.current.connect(audioContext.destination); // Optional: local echo
 
-      mediaRecorderRef.current.start(250); // Send chunks every 250ms
       setIsRecording(true);
+      setIsResponding(true); // Expecting response
       toast.success("Recording started. Speak now!");
     } catch (err) {
+      console.error('Recording start error:', err);
       toast.error("Microphone access denied");
     }
   };
 
   const stopRecording = () => {
-    if (mediaRecorderRef.current) {
-      mediaRecorderRef.current.stop();
-      setIsRecording(false);
-      toast.success("Recording stopped");
-      // Send end signal
-      if (wsRef.current?.readyState === WebSocket.OPEN) {
-        wsRef.current.send(JSON.stringify({ type: "end-audio" }));
-      }
+    setIsRecording(false);
+    setIsResponding(false);
+    toast.success("Recording stopped");
+    
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type: 'end-turn' }));
     }
+
+    // Cleanup audio
+    if (audioSourceRef.current) {
+      audioSourceRef.current.stop();
+      audioSourceRef.current = null;
+    }
+    playQueuedAudio(); // Play any remaining audio
+
+    // Cleanup
+    if (processorRef.current) {
+      processorRef.current.disconnect();
+    }
+    if (inputRef.current) {
+      inputRef.current.disconnect();
+    }
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+    if (audioContextRef.current) {
+      audioContextRef.current.close();
+      audioContextRef.current = null;
+    }
+  };
+
+  const playQueuedAudio = () => {
+    if (audioQueueRef.current.length === 0) return;
+
+    // Create a single buffer from all chunks
+    const totalLength = audioQueueRef.current.reduce((sum, chunk) => sum + chunk.length, 0);
+    const fullBuffer = new Uint8Array(totalLength);
+    let offset = 0;
+    audioQueueRef.current.forEach(chunk => {
+      fullBuffer.set(chunk, offset);
+      offset += chunk.length;
+    });
+
+    // Create AudioBuffer for 16-bit PCM, mono, 16000Hz
+    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 });
+    const audioBuffer = audioContext.createBuffer(1, totalLength / 2, 16000); // /2 for int16
+    const channelData = audioBuffer.getChannelData(0);
+
+    // Convert Uint8Array (little-endian int16) to Float32
+    for (let i = 0; i < totalLength; i += 2) {
+      const int16 = (fullBuffer[i + 1] << 8) | fullBuffer[i]; // Little-endian
+      channelData[i / 2] = int16 / 0x8000; // Normalize to -1 to 1
+    }
+
+    // Play
+    const source = audioContext.createBufferSource();
+    source.buffer = audioBuffer;
+    source.connect(audioContext.destination);
+    source.start();
+    audioSourceRef.current = source;
+
+    // Clear queue
+    audioQueueRef.current = [];
   };
 
   if (!isConnected) {
@@ -136,6 +222,12 @@ export default function LiveVoiceAI({ onBack }: LiveVoiceAIProps) {
           >
             <Mic className="h-6 w-6" />
           </button>
+          {isResponding && (
+            <div className="mt-2 flex items-center justify-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span>Listening...</span>
+            </div>
+          )}
           <p className="mt-2">{isRecording ? "Recording..." : "Tap to speak"}</p>
         </div>
 
