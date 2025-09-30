@@ -193,10 +193,10 @@ export default function MainContent({
       </div>
       
       <footer className="w-full max-w-[768px] text-center pb-4 pt-2">
-        <p className="text-xs leading-relaxed text-muted-foreground !w-[362px] !h-full">
-          <a href="#" target="_blank" rel="noopener noreferrer" className="inline-block px-2 hover:underline">Terms and Conditions</a>,
-          <a href="#" target="_blank" rel="noopener noreferrer" className="inline-block px-2 hover:underline"></a>, and
-          <a href="#" target="_blank" rel="noopener noreferrer" className="inline-block px-2 hover:underline">Disclaimer</a> apply. Hesper can make mistakes, so double-check it.
+        <p className="text-xs leading-relaxed text-muted-foreground mx-auto max-w-[500px]">
+          <a href="/terms" className="px-2 hover:underline text-primary">Terms and Conditions</a>,
+          <a href="/privacy" className="px-2 hover:underline text-primary">Privacy Policy</a>, and
+          <a href="/terms" className="px-2 hover:underline text-primary">Disclaimer</a> apply. Hesper can make mistakes, so double-check it.
         </p>
       </footer>
     </div>);
