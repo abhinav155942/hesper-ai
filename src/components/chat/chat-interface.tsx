@@ -497,7 +497,7 @@ I'm here to help with a wide range of tasks including answering questions, helpi
   const getModelInfo = () => {
     if (selectedModel === 'hesper-pro') {
       return {
-        icon: <Brain className="h-1 w-1" />,
+        icon: <Brain className="h-4 w-4" />,
         name: "Hesper Pro", // new display name going forward
         description: "Advanced reasoning model"
       };
