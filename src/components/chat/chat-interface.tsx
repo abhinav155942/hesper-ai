@@ -2,8 +2,7 @@
 
 import * as React from "react";
 import { useState, useRef, useEffect } from "react";
-import { useCallback } from "react";
-import { Send, Mic, RotateCcw, Copy, ThumbsUp, ThumbsDown, Zap, Brain, ChevronDown, ChevronLeft, Upload, MoreHorizontal, FileDown, MailCheck, Volume2, VolumeX } from 'lucide-react';
+import { Send, Mic, RotateCcw, Copy, ThumbsUp, ThumbsDown, Zap, Brain, ChevronDown, ChevronLeft, Upload, MoreHorizontal, FileDown, MailCheck } from 'lucide-react';
 import { toast } from "sonner";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuLabel } from "@/components/ui/dropdown-menu";
 
@@ -78,19 +77,12 @@ export default function ChatInterface({ selectedModel, onBack, initialMessage, c
   const [initialized, setInitialized] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [sessionLoaded, setSessionLoaded] = useState(false);
-  const [isVoiceMode, setIsVoiceMode] = useState(false);
-  const [ws, setWs] = useState<WebSocket | null>(null);
-  const [isConnected, setIsConnected] = useState(false);
-  const [isListening, setIsListening] = useState(false);
-  const [transcript, setTranscript] = useState('');
-  const [isSpeaking, setIsSpeaking] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const prevCountRef = useRef(0);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
-  const synthesis = useRef(speechSynthesis);
   const inFlightRef = useRef(false);
   const sendingRef = useRef(false);
   const sessionIdRef = useRef<string | null>(null);
@@ -218,148 +210,6 @@ export default function ChatInterface({ selectedModel, onBack, initialMessage, c
 
     recognitionRef.current = recognition;
   }, []);
-
-  // New useEffect for WebSocket management
-  useEffect(() => {
-    if (!isVoiceMode) {
-      // Cleanup on voice mode off
-      if (ws) {
-        ws.close();
-        setWs(null);
-      }
-      if (recognitionRef.current) {
-        recognitionRef.current.stop();
-      }
-      setIsConnected(false);
-      setTranscript('');
-      return;
-    }
-
-    // Connect to WebSocket when voice mode enabled
-    const token = localStorage.getItem('bearer_token');
-    if (!token) {
-      toast.error('Please log in to use voice chat');
-      setIsVoiceMode(false);
-      return;
-    }
-
-    const websocket = new WebSocket(`ws://localhost:3000/api/voice/chat`);
-    setWs(websocket);
-
-    websocket.onopen = () => {
-      setIsConnected(true);
-      toast.success('Voice chat connected');
-    };
-
-    websocket.onclose = () => {
-      setIsConnected(false);
-      setIsVoiceMode(false);
-      toast.info('Voice chat disconnected');
-    };
-
-    websocket.onerror = () => {
-      toast.error('Voice chat connection failed');
-      setIsVoiceMode(false);
-    };
-
-    websocket.onmessage = (event) => {
-      if (typeof event.data === 'string') {
-        try {
-          const data = JSON.parse(event.data);
-          if (data.type === 'response') {
-            // Append to messages if in text view, or speak if voice
-            const newMsg: Message = {
-              id: `voice-${Date.now()}`,
-              type: 'assistant',
-              content: data.text || '',
-              timestamp: new Date(),
-              modelName: 'Hesper Live'
-            };
-            setMessages(prev => [...prev, newMsg]);
-            if (isVoiceMode && data.text) {
-              speakText(data.text);
-            }
-          } else if (data.type === 'error') {
-            toast.error(data.message);
-          }
-        } catch (err) {
-          console.error('Parse error:', err);
-        }
-      } else if (event.data instanceof ArrayBuffer) {
-        // Handle binary audio chunk from Gemini
-        playAudioChunk(event.data);
-        setIsSpeaking(true);
-        // Set timeout to stop speaking indicator
-        setTimeout(() => setIsSpeaking(false), 1000);
-      }
-    };
-
-    // Cleanup
-    return () => {
-      websocket.close();
-    };
-  }, [isVoiceMode]);
-
-  // Update the STT useEffect for voice mode to use Web Audio API for PCM streaming
-  useEffect(() => {
-    if (!isVoiceMode || !isListening) return;
-
-    let audioContext: AudioContext | null = null;
-    let processor: ScriptProcessorNode | null = null;
-    let input: MediaStreamAudioSourceNode | null = null;
-    let stream: MediaStream | null = null;
-
-    const startVoiceInput = async () => {
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({ 
-          audio: {
-            sampleRate: 16000,
-            channelCount: 1,
-            echoCancellation: true,
-            noiseSuppression: true
-          }
-        });
-
-        audioContext = new AudioContext({ sampleRate: 16000 });
-        
-        input = audioContext.createMediaStreamSource(stream);
-        processor = audioContext.createScriptProcessor(4096, 1, 1);
-
-        processor.onaudioprocess = (e) => {
-          const inputBuffer = e.inputBuffer.getChannelData(0);
-          if (ws && ws.readyState === WebSocket.OPEN) {
-            const pcmData = new Float32Array(inputBuffer);
-            // Convert to 16-bit PCM
-            const int16Data = new Int16Array(pcmData.length);
-            for (let i = 0; i < pcmData.length; i++) {
-              let sample = pcmData[i] * 0x7FFF;
-              if (sample < -0x8000) sample = -0x8000;
-              if (sample > 0x7FFF) sample = 0x7FFF;
-              int16Data[i] = sample;
-            }
-            ws.send(int16Data.buffer);
-          }
-        };
-
-        input.connect(processor);
-        processor.connect(audioContext.destination); // Optional echo
-
-        // Send end-turn when stopping if needed
-      } catch (err) {
-        toast.error('Microphone access denied');
-        setIsVoiceMode(false);
-      }
-    };
-
-    startVoiceInput();
-
-    return () => {
-      if (processor) processor.disconnect();
-      if (input) input.disconnect();
-      if (stream) stream.getTracks().forEach(track => track.stop());
-      if (audioContext) audioContext.close();
-    };
-  }, [isVoiceMode, isListening, ws]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -635,68 +485,13 @@ I'm here to help with a wide range of tasks including answering questions, helpi
   };
 
   const handleMicClick = () => {
-    // For text mode mic (STT to text input)
-    if (!('webkitSpeechRecognition' in window)) {
-      toast.error("Speech recognition not supported");
-      return;
-    }
+    if (!recognitionRef.current || isLoading) return;
 
-    const SpeechRecognition = (window as any).webkitSpeechRecognition || window.SpeechRecognition;
-    const recognition = new SpeechRecognition();
-    recognition.lang = 'en-US';
-    recognition.interimResults = false;
-
-    recognition.onresult = (event: SpeechRecognitionEvent) => {
-      const transcript = event.results[0][0].transcript;
-      setInputValue(transcript);
-    };
-
-    recognition.onerror = () => toast.error("Voice input failed");
-    recognition.start();
-  };
-
-  const toggleVoiceListening = useCallback(() => {
-    if (!isConnected) {
-      toast.error('Voice chat not connected');
-      return;
-    }
-
-    setIsListening(!isListening);
-    if (!isListening) {
-      setTranscript(''); 
-      // Start listening - no specific signal needed
+    if (isRecording) {
+      recognitionRef.current.stop();
     } else {
-      // Stop listening - send end-turn
-      if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ type: 'end-turn' }));
-      }
+      recognitionRef.current.start();
     }
-  }, [isConnected, isListening, ws]);
-
-  const playAudioChunk = useCallback(async (audioData: ArrayBuffer | Blob) => {
-    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-    const arrayBuffer = audioData instanceof ArrayBuffer ? audioData : await audioData.arrayBuffer();
-    
-    audioContext.decodeAudioData(arrayBuffer).then(decodedData => {
-      const source = audioContext.createBufferSource();
-      source.buffer = decodedData;
-      source.connect(audioContext.destination);
-      source.start();
-    }).catch(err => {
-      console.error('Audio playback error:', err);
-      // Fallback to speech synthesis if needed
-      // But since Gemini sends audio, this should work
-    });
-  }, []);
-
-  const speakText = (text: string) => {
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'en-US';
-    utterance.rate = 0.9;
-    utterance.pitch = 1;
-    utterance.onstart = () => setIsSpeaking(true);
-    utterance.onend = () => setIsSpeaking(false);
-    synthesis.current.speak(utterance);
   };
 
   const getModelInfo = () => {
@@ -994,47 +789,6 @@ I'm here to help with a wide range of tasks including answering questions, helpi
       {/* Input Area */}
       <div className="p-2 border-t border-border bg-card pb-[env(safe-area-inset-bottom)]">
         <form onSubmit={handleSubmit} className="relative">
-          {isVoiceMode && (
-            <div className="mb-2 p-2 bg-secondary rounded-lg">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Voice Mode Active - {isConnected ? 'Connected' : 'Connecting...'}</span>
-                <button
-                  onClick={() => setIsVoiceMode(false)}
-                  className="text-xs text-destructive hover:underline"
-                >
-                  Switch to Text
-                </button>
-              </div>
-              <div className="flex items-center gap-2 mt-2">
-                <button
-                  onClick={toggleVoiceListening}
-                  className={`p-2 rounded-full transition-colors ${
-                    isListening
-                      ? 'bg-destructive text-destructive-foreground'
-                      : isConnected
-                      ? 'bg-primary text-primary-foreground hover:bg-primary/90'
-                      : 'bg-muted text-muted-foreground cursor-not-allowed'
-                  }`}
-                  disabled={!isConnected}
-                >
-                  <Mic className={`h-4 w-4 ${isListening ? 'animate-pulse' : ''}`} />
-                  {isListening ? 'Stop Listening' : 'Start Voice Input'}
-                </button>
-                {isSpeaking && (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground animate-pulse">
-                    <Volume2 className="h-4 w-4" />
-                    AI Speaking
-                  </div>
-                )}
-              </div>
-              {transcript && !isListening && (
-                <div className="mt-2 text-xs text-muted-foreground p-1 bg-background rounded">
-                  Last captured: {transcript}
-                </div>
-              )}
-            </div>
-          )}
-
           <div className="flex items-center gap-1 sm:gap-2 sm:gap-3 bg-secondary rounded-full py-1 pl-3 sm:pl-4 sm:pl-6 pr-1 sm:pr-2 shadow-sm focus-within:ring-2 focus-within:ring-primary/20 min-h-[44px]">
             <input
               ref={inputRef}
@@ -1056,16 +810,6 @@ I'm here to help with a wide range of tasks including answering questions, helpi
                 aria-label="Attach file">
 
                 <Upload className="h-4 sm:h-5 w-4 sm:w-5 text-muted-foreground" />
-              </button>
-              
-              <button
-                type="button"
-                onClick={() => setIsVoiceMode(!isVoiceMode)}
-                className="p-2 rounded-full hover:bg-muted transition-colors"
-                title={isVoiceMode ? "Switch to Text Mode" : "Enable Voice Mode"}
-                disabled={isLoading}
-              >
-                {isVoiceMode ? <VolumeX className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
               </button>
               
               <button
