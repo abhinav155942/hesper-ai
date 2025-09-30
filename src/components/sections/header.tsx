@@ -10,11 +10,12 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   Tooltip,
   TooltipContent,
-  TooltipTrigger
-} from
-"@/components/ui/dropdown-menu";
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useSession, signOut } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
 
@@ -238,7 +239,8 @@ const Header = ({ onMenuClick, selectedModel, onModelChange }: HeaderProps) => {
         </DropdownMenu>
       </div>
 
-      {isVoiceMode && (
+      {/* Temporarily remove voice mode indicator until properly integrated */}
+      {/* {isVoiceMode && (
         <Tooltip>
           <TooltipTrigger asChild>
             <div className="flex items-center gap-1 text-xs text-blue-500 animate-pulse">
@@ -250,7 +252,7 @@ const Header = ({ onMenuClick, selectedModel, onModelChange }: HeaderProps) => {
             <p>You are in voice mode</p>
           </TooltipContent>
         </Tooltip>
-      )}
+      )} */}
 
       <div className="flex items-center gap-1 md:gap-2 lg:gap-3 xl:gap-6">
         <Link
