@@ -1,10 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import dynamic from "next/dynamic";
-
-const ErrorReporter = dynamic(() => import("@/components/ErrorReporter"), { ssr: false });
-const VisualEditsMessenger = dynamic(() => import("../visual-edits/VisualEditsMessenger"), { ssr: false });
-const Toaster = dynamic(() => import("@/components/ui/sonner"), { ssr: false });
+import { ClientInjections } from "@/components/ClientInjections";
 import Script from "next/script";
 
 export const metadata: Metadata = {
@@ -24,7 +20,7 @@ export default function RootLayout({
         <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
       </head>
       <body className="antialiased">
-        <ErrorReporter />
+        <ClientInjections />
         <Script
           src="https://slelguoygbfzlpylpxfs.supabase.co/storage/v1/object/public/scripts//route-messenger.js"
           strategy="afterInteractive"
@@ -36,8 +32,6 @@ export default function RootLayout({
           data-custom-data='{"appName": "YourApp", "version": "1.0.0", "greeting": "hi"}'
         />
         {children}
-        <VisualEditsMessenger />
-        <Toaster />
       </body>
     </html>
   );
