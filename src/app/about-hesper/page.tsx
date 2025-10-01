@@ -82,6 +82,16 @@ export default function AboutHesperPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
+  const crmData = [
+    { name: 'Automated', value: 80 },
+    { name: 'Manual', value: 20 },
+  ];
+  const aiData = [
+    { name: 'Deep', value: 90 },
+    { name: 'Basic', value: 10 },
+  ];
+  const COLORS = ['#10B981', '#6B7280'];
+
   return (
     <div className="min-h-screen bg-background">
       <div className="container max-w-4xl mx-auto px-6 py-12">
