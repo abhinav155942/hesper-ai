@@ -4,6 +4,7 @@ import * as React from "react";
 import { useState, useEffect, useRef } from "react";
 import { Mic } from 'lucide-react';
 import { toast } from "sonner";
+import { useSession } from "@/lib/auth-client";
 import ChatInterface from "@/components/chat/chat-interface";
 
 interface MainContentProps {
@@ -28,6 +29,9 @@ export default function MainContent({
   const [credits, setCredits] = useState(0);
   const [isRecording, setIsRecording] = useState(false);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const { data: session } = useSession();
+  const firstName = session?.user?.name?.split(' ')[0] || '';
+  const isSignedIn = !!session?.user && !!firstName;
 
   useEffect(() => {
     if (externalChatMode !== undefined) {
@@ -157,12 +161,25 @@ export default function MainContent({
         <div className="w-full max-w-[900px] flex flex-col items-center justify-center">
           
           <div className="text-center mb-6 sm:mb-10 w-full">
-            <h1 className="font-['Google_Sans'] font-normal text-4xl sm:text-5xl md:text-[56px] leading-[1.15] text-foreground/80">
-              Meet <span className="bg-gradient-to-r from-[#5f3dc4] via-[#ff6b6b] to-[#4ecdc4] bg-clip-text text-transparent">Hesper,</span>
-            </h1>
-            <h2 className="font-['Google_Sans'] font-normal text-4xl sm:text-5xl md:text-[56px] leading-[1.15] text-foreground/80 mt-1">
-              your <span className="bg-gradient-to-r from-[#5f3dc4] via-[#ff6b6b] to-[#4ecdc4] bg-clip-text text-transparent">personal AI assistant</span>
-            </h2>
+            {isSignedIn ? (
+              <>
+                <h1 className="font-['Google_Sans'] font-normal text-4xl sm:text-5xl md:text-[56px] leading-[1.15] text-foreground/80">
+                  Hi {firstName},
+                </h1>
+                <h2 className="font-['Google_Sans'] font-normal text-4xl sm:text-5xl md:text-[56px] leading-[1.15] text-foreground/80 mt-1">
+                  {selectedModel === 'hesper-pro' ? 'Ready to finish a task?' : "what's the agenda today?"}
+                </h2>
+              </>
+            ) : (
+              <>
+                <h1 className="font-['Google_Sans'] font-normal text-4xl sm:text-5xl md:text-[56px] leading-[1.15] text-foreground/80">
+                  Meet <span className="bg-gradient-to-r from-[#5f3dc4] via-[#ff6b6b] to-[#4ecdc4] bg-clip-text text-transparent">{selectedModel === 'hesper-pro' ? 'Hesper Agent' : 'Hesper'},</span>
+                </h1>
+                <h2 className="font-['Google_Sans'] font-normal text-4xl sm:text-5xl md:text-[56px] leading-[1.15] text-foreground/80 mt-1">
+                  your <span className="bg-gradient-to-r from-[#5f3dc4] via-[#ff6b6b] to-[#4ecdc4] bg-clip-text text-transparent">{selectedModel === 'hesper-pro' ? 'personal AI Agent' : 'personal AI assistant'}</span>
+                </h2>
+              </>
+            )}
           </div>
 
           <div className="w-full max-w-[768px] mb-4">
