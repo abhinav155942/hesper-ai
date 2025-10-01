@@ -73,6 +73,23 @@ export async function POST(req: NextRequest) {
           client_hostname: null as string | null,
           ssl_tls_enabled: null as boolean | null,
         },
+        sendgrid: {
+          api_key: null as string | null,
+        },
+        mailgun: {
+          api_key: null as string | null,
+          domain: null as string | null,
+        },
+        outlook: {
+          client_id: null as string | null,
+          client_secret: null as string | null,
+          tenant_id: null as string | null,
+        },
+        ses: {
+          access_key: null as string | null,
+          secret_key: null as string | null,
+          region: null as string | null,
+        },
         email_tone: null,
         email_description: null,
         email_signature: null,
@@ -85,6 +102,10 @@ export async function POST(req: NextRequest) {
         ...defaultSettings,
         ...(settings || {}),
         smtp: { ...defaultSettings.smtp, ...(settings?.smtp || {}) },
+        sendgrid: { ...defaultSettings.sendgrid, ...(settings?.sendgrid || {}) },
+        mailgun: { ...defaultSettings.mailgun, ...(settings?.mailgun || {}) },
+        outlook: { ...defaultSettings.outlook, ...(settings?.outlook || {}) },
+        ses: { ...defaultSettings.ses, ...(settings?.ses || {}) },
       };
 
       // Normalize chat history to last 6 messages (user + assistant roles)
