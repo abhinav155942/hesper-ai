@@ -53,6 +53,10 @@ export async function POST(request: NextRequest) {
         credits: newCredits,
         basicMessageCount: 0, // Reset message counters
         proMessageCount: 0,   // Reset message counters
+        dailyBasicMessages: 0, // Reset daily counters
+        dailyProMessages: 0,   // Reset daily counters
+        basicDailyLimit: 100,  // Pro users get higher basic limit
+        proDailyLimit: 50,     // Pro users get higher pro limit
         updatedAt: new Date(),
       })
       .where(eq(user.id, currentUser.id))
@@ -73,6 +77,8 @@ export async function POST(request: NextRequest) {
           plan: "pro",
           expiry: subscriptionExpiry.toISOString(),
           credits: newCredits,
+          basicDailyLimit: 100,
+          proDailyLimit: 50,
         },
         subscriptionID,
       },

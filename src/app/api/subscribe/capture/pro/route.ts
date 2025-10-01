@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
     // Calculate subscription expiry (30 days from now)
     const subscriptionExpiry = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
-    // Update user subscription
+    // Update user subscription with pro daily limits
     const updatedUser = await db.update(user)
       .set({
         subscriptionPlan: 'pro',
@@ -82,6 +82,10 @@ export async function POST(request: NextRequest) {
         credits: 999999,
         basicMessageCount: 0, // Reset message counters
         proMessageCount: 0,   // Reset message counters
+        dailyBasicMessages: 0, // Reset daily counters
+        dailyProMessages: 0,   // Reset daily counters
+        basicDailyLimit: 100,  // Pro users get higher basic limit
+        proDailyLimit: 50,     // Pro users get higher pro limit
         updatedAt: new Date()
       })
       .where(eq(user.id, currentUser.id))
@@ -100,7 +104,9 @@ export async function POST(request: NextRequest) {
       subscription: {
         plan: 'pro',
         expiry: subscriptionExpiry.toISOString(),
-        credits: 999999
+        credits: 999999,
+        basicDailyLimit: 100,
+        proDailyLimit: 50
       },
       paypalOrderId: orderID,
       paymentStatus: captureResponse.result.status

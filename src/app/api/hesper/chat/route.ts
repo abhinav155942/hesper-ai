@@ -75,20 +75,11 @@ export async function POST(req: NextRequest) {
         },
         sendgrid: {
           api_key: null as string | null,
+          domain: null as string | null,
         },
         mailgun: {
           api_key: null as string | null,
           domain: null as string | null,
-        },
-        outlook: {
-          client_id: null as string | null,
-          client_secret: null as string | null,
-          tenant_id: null as string | null,
-        },
-        ses: {
-          access_key: null as string | null,
-          secret_key: null as string | null,
-          region: null as string | null,
         },
         email_tone: null,
         email_description: null,
@@ -104,8 +95,6 @@ export async function POST(req: NextRequest) {
         smtp: { ...defaultSettings.smtp, ...(settings?.smtp || {}) },
         sendgrid: { ...defaultSettings.sendgrid, ...(settings?.sendgrid || {}) },
         mailgun: { ...defaultSettings.mailgun, ...(settings?.mailgun || {}) },
-        outlook: { ...defaultSettings.outlook, ...(settings?.outlook || {}) },
-        ses: { ...defaultSettings.ses, ...(settings?.ses || {}) },
       };
 
       // Normalize chat history to last 6 messages (user + assistant roles)
@@ -121,15 +110,18 @@ export async function POST(req: NextRequest) {
         settings: fullSettings,
       };
 
-      // Check daily message limit and credit deduction for authenticated users
+      // Check daily message limits and credit deduction for authenticated users
       if (currentUser?.id) {
         const userRecord = await db.select({
           credits: user.credits,
           subscriptionPlan: user.subscriptionPlan,
-          dailyMessages: user.dailyMessages,
-          lastResetDate: user.lastResetDate,
           basicMessageCount: user.basicMessageCount,
-          proMessageCount: user.proMessageCount
+          proMessageCount: user.proMessageCount,
+          dailyBasicMessages: user.dailyBasicMessages,
+          dailyProMessages: user.dailyProMessages,
+          basicDailyLimit: user.basicDailyLimit,
+          proDailyLimit: user.proDailyLimit,
+          lastResetDate: user.lastResetDate
         })
           .from(user)
           .where(eq(user.id, userId))
@@ -142,88 +134,87 @@ export async function POST(req: NextRequest) {
         const userData = userRecord[0];
         const currentCredits = userData.credits ?? 0;
         const subscriptionPlan = userData.subscriptionPlan || 'free';
-        let dailyMessages = userData.dailyMessages ?? 0;
-        const lastResetDate = userData.lastResetDate;
+        let dailyBasicMessages = userData.dailyBasicMessages ?? 0;
+        let dailyProMessages = userData.dailyProMessages ?? 0;
         let basicMessageCount = userData.basicMessageCount ?? 0;
         let proMessageCount = userData.proMessageCount ?? 0;
+        const basicDailyLimit = userData.basicDailyLimit ?? 30;
+        const proDailyLimit = userData.proDailyLimit ?? 3;
+        const lastResetDate = userData.lastResetDate;
 
-        // Handle daily message limit for pro users
-        if (subscriptionPlan === 'pro') {
-          const today = new Date().toDateString();
+        // Handle daily message reset if it's a new day
+        const today = new Date().toDateString();
+        let needsDailyReset = false;
+        
+        if (lastResetDate !== today) {
+          needsDailyReset = true;
+          dailyBasicMessages = 0;
+          dailyProMessages = 0;
           
-          // Reset daily messages if it's a new day
-          if (lastResetDate !== today) {
-            dailyMessages = 0;
-            await db.update(user)
-              .set({ 
-                dailyMessages: 0, 
-                lastResetDate: today,
-                updatedAt: new Date() 
-              })
-              .where(eq(user.id, userId));
-          }
-
-          // Check daily limit for pro users
-          if (dailyMessages >= 50) {
-            return Response.json({ 
-              error: "Daily message limit of 50 reached for Pro plan. Upgrade or wait for reset." 
-            }, { status: 402 });
-          }
+          await db.update(user)
+            .set({ 
+              dailyBasicMessages: 0,
+              dailyProMessages: 0,
+              lastResetDate: today,
+              updatedAt: new Date() 
+            })
+            .where(eq(user.id, userId));
         }
 
         // Model-specific logic
         let creditsToDeduct = 0;
         let messageCountUpdate: any = {};
+        let dailyCountUpdate: any = {};
 
-        if (model === 'hesper-1.0v') {
-          // Basic model: Increment basicMessageCount, deduct 1 credit every 3 messages
-          const newBasicCount = basicMessageCount + 1;
-          messageCountUpdate.basicMessageCount = newBasicCount;
+        if (model === 'hesper-1.0v' || !model) {
+          // Basic model: Check daily limit
+          if (dailyBasicMessages >= basicDailyLimit) {
+            return Response.json({ 
+              error: `Daily limit of ${basicDailyLimit} messages for Hesper 1.0v reached.` 
+            }, { status: 402 });
+          }
 
-          if (newBasicCount % 3 === 0) {
+          const newBasicDaily = dailyBasicMessages + 1;
+          const newBasicLifetime = basicMessageCount + 1;
+          
+          dailyCountUpdate.dailyBasicMessages = newBasicDaily;
+          messageCountUpdate.basicMessageCount = newBasicLifetime;
+
+          // Deduct 1 credit every 4 messages
+          if (newBasicLifetime % 4 === 0) {
             creditsToDeduct = 1;
             if (currentCredits < creditsToDeduct) {
               return Response.json({ 
-                error: "Insufficient credits for this request", 
+                error: `Insufficient credits. Need ${creditsToDeduct}, have ${currentCredits}.`,
                 credits: currentCredits,
                 required: creditsToDeduct
               }, { status: 402 });
             }
           }
         } else if (model === 'hesper-pro') {
-          // Pro model: Check subscription plan first, then credits
-          if (subscriptionPlan !== 'pro') {
-            if (currentCredits < 5) {
-              return Response.json({ 
-                error: "Hesper Pro requires Pro subscription or sufficient credits", 
-                credits: currentCredits 
-              }, { status: 402 });
-            }
+          // Pro model: Check daily limit
+          if (dailyProMessages >= proDailyLimit) {
+            return Response.json({ 
+              error: `Daily limit of ${proDailyLimit} messages for Hesper Pro reached.` 
+            }, { status: 402 });
           }
 
-          const newProCount = proMessageCount + 1;
-          messageCountUpdate.proMessageCount = newProCount;
+          const newProDaily = dailyProMessages + 1;
+          const newProLifetime = proMessageCount + 1;
+          
+          dailyCountUpdate.dailyProMessages = newProDaily;
+          messageCountUpdate.proMessageCount = newProLifetime;
 
-          if (newProCount % 3 === 0) {
-            creditsToDeduct = 5;
+          // Deduct 2 credits every 3 messages for Pro
+          if (newProLifetime % 3 === 0) {
+            creditsToDeduct = 2;
             if (currentCredits < creditsToDeduct) {
               return Response.json({ 
-                error: "Insufficient credits for this request", 
+                error: `Insufficient credits for Hesper Pro. Need ${creditsToDeduct}, have ${currentCredits}.`,
                 credits: currentCredits,
                 required: creditsToDeduct
               }, { status: 402 });
             }
-          }
-        } else {
-          // Default/legacy behavior - check credits for non-pro plans
-          if (subscriptionPlan !== 'pro' || currentCredits > 0) {
-            if (currentCredits < 1) {
-              return Response.json({ 
-                error: "Insufficient credits for this request", 
-                credits: currentCredits 
-              }, { status: 402 });
-            }
-            creditsToDeduct = 1;
           }
         }
 
@@ -246,13 +237,9 @@ export async function POST(req: NextRequest) {
           // Update user after successful response
           const updates: any = {
             updatedAt: new Date(),
-            ...messageCountUpdate
+            ...messageCountUpdate,
+            ...dailyCountUpdate
           };
-
-          // Increment daily messages for pro users
-          if (subscriptionPlan === 'pro') {
-            updates.dailyMessages = dailyMessages + 1;
-          }
 
           // Deduct credits if needed
           if (creditsToDeduct > 0) {

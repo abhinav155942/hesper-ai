@@ -30,9 +30,9 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Initialize testing credits for new users if none present
+    // Initialize testing credits for new users only if credits is null
     let credits = userRecord[0].credits;
-    if (credits == null || credits <= 0) {
+    if (credits == null) {
       await db.update(user).set({ credits: 10 }).where(eq(user.id, currentUser.id));
       credits = 10;
     }

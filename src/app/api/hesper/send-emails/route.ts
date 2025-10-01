@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Calculate credits cost
-    const creditsRequired = Math.ceil(leads.length / 10) * 5;
+    const creditsRequired = Math.ceil(leads.length / 15) * 5;
 
     // Get current user's credits
     const userRecord = await db.select({ credits: user.credits })

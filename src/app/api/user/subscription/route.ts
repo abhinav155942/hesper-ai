@@ -17,7 +17,11 @@ export async function GET(request: NextRequest) {
       subscriptionPlan: user.subscriptionPlan,
       subscriptionExpiry: user.subscriptionExpiry,
       credits: user.credits,
-      dailyMessages: user.dailyMessages
+      dailyMessages: user.dailyMessages,
+      dailyBasicMessages: user.dailyBasicMessages,
+      dailyProMessages: user.dailyProMessages,
+      basicDailyLimit: user.basicDailyLimit,
+      proDailyLimit: user.proDailyLimit
     })
     .from(user)
     .where(eq(user.id, currentUser.id))
@@ -33,7 +37,11 @@ export async function GET(request: NextRequest) {
       subscriptionPlan: userRecord[0].subscriptionPlan,
       subscriptionExpiry: userRecord[0].subscriptionExpiry,
       credits: userRecord[0].credits,
-      dailyMessages: userRecord[0].dailyMessages
+      dailyMessages: userRecord[0].dailyMessages,
+      dailyBasicMessages: userRecord[0].dailyBasicMessages,
+      dailyProMessages: userRecord[0].dailyProMessages,
+      basicDailyLimit: userRecord[0].basicDailyLimit,
+      proDailyLimit: userRecord[0].proDailyLimit
     });
 
   } catch (error) {
