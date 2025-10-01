@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import VisualEditsMessenger from "../visual-edits/VisualEditsMessenger";
-import ErrorReporter from "@/components/ErrorReporter";
+import dynamic from "next/dynamic";
+
+const ErrorReporter = dynamic(() => import("@/components/ErrorReporter"), { ssr: false });
+const VisualEditsMessenger = dynamic(() => import("../visual-edits/VisualEditsMessenger"), { ssr: false });
+const Toaster = dynamic(() => import("@/components/ui/sonner"), { ssr: false });
 import Script from "next/script";
-import { Toaster } from "@/components/ui/sonner";
 
 export const metadata: Metadata = {
   title: "Create Next App",
