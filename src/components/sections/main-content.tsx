@@ -2,9 +2,11 @@
 
 import * as React from "react";
 import { useState, useEffect, useRef } from "react";
+import Link from "next/link";
 import { Mic } from 'lucide-react';
 import { toast } from "sonner";
 import { useSession } from "@/lib/auth-client";
+import { Button } from "@/components/ui/button";
 import ChatInterface from "@/components/chat/chat-interface";
 
 interface MainContentProps {
