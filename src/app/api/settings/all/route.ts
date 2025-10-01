@@ -114,22 +114,17 @@ export async function GET(request: NextRequest) {
     const userData = userResult[0] || {};
 
     const response = {
-      // SMTP fields - return actual values or null
+      // SMTP fields
       smtp_username: smtpData.smtp_username || null,
-      smtp_password: smtpData.smtp_password || null,
+      smtp_password: null, // Never return password
       smtp_host: smtpData.smtp_host || null,
       smtp_port: smtpData.smtp_port || null,
       client_hostname: smtpData.client_hostname || null,
       ssl_tls_enabled: smtpData.ssl_tls_enabled || false,
-      
-      // SendGrid fields - return actual values or null
-      sendgrid_api_key: smtpData.sendgrid_api_key || userData.sendgrid_api_key || null,
-      sendgrid_domain_email: smtpData.sendgrid_domain_email || userData.sendgrid_domain || null,
-      
-      // Mailgun fields - return actual values or null
-      mailgun_api_key: smtpData.mailgun_api_key || userData.mailgun_api_key || null,
-      mailgun_domain_email: smtpData.mailgun_domain_email || userData.mailgun_domain || null,
-      
+      sendgrid_api_key: null, // Never return API key for security
+      sendgrid_domain_email: smtpData.sendgrid_domain_email || null,
+      mailgun_api_key: null, // Never return API key for security
+      mailgun_domain_email: smtpData.mailgun_domain_email || null,
       // Email format fields
       email_tone: emailData.email_tone || null,
       email_description: emailData.email_description || null,
@@ -143,7 +138,9 @@ export async function GET(request: NextRequest) {
       // Lists
       business_pros: businessProsResult || [],
       business_differences: businessDifferencesResult || [],
-      // Email provider field from user table
+      // Email provider fields from user table
+      sendgrid_domain: userData.sendgrid_domain || null,
+      mailgun_domain: userData.mailgun_domain || null,
       email_provider: userData.email_provider || null
     };
 
