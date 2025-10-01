@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { signIn, useSession } from "@/lib/auth-client";
 import { toast } from "sonner";
@@ -15,7 +14,6 @@ export default function SignInPage() {
   const [formData, setFormData] = useState({
     email: "",
     password: "",
-    rememberMe: false,
   });
   const [loading, setLoading] = useState(false);
   const router = useRouter();
@@ -28,8 +26,6 @@ export default function SignInPage() {
     const { data, error } = await signIn.email({
       email: formData.email,
       password: formData.password,
-      rememberMe: formData.rememberMe,
-      callbackURL: "/",
     });
 
     setLoading(false);
@@ -37,11 +33,6 @@ export default function SignInPage() {
     if (error?.code) {
       toast.error("Invalid email or password. Please make sure you have already registered an account and try again.");
       return;
-    }
-
-    // Store the bearer token from the session
-    if (data?.session?.token) {
-      localStorage.setItem("bearer_token", data.session.token);
     }
 
     toast.success("Signed in successfully!");
@@ -81,14 +72,6 @@ export default function SignInPage() {
               autoComplete="current-password"
               required
             />
-          </div>
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="rememberMe"
-              checked={formData.rememberMe}
-              onCheckedChange={(checked) => setFormData({ ...formData, rememberMe: !!checked })}
-            />
-            <Label htmlFor="rememberMe">Remember me</Label>
           </div>
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? "Signing in..." : "Sign in"}

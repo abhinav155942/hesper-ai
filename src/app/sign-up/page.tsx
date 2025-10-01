@@ -29,35 +29,25 @@ export default function SignUpPage() {
     }
     setLoading(true);
 
-    try {
-      const { data, error } = await signUp.email({
-        email: formData.email,
-        name: formData.name,
-        password: formData.password,
-      }, {
-        onSuccess: (ctx) => {
-          // Token is handled globally by auth-client onSuccess
-          console.log("Sign up successful, token stored via global handler");
-        }
-      });
+    const { data, error } = await signUp.email({
+      email: formData.email,
+      name: formData.name,
+      password: formData.password,
+    });
 
-      setLoading(false);
+    setLoading(false);
 
-      if (error?.code) {
-        const errorMap: Record<string, string> = {
-          USER_ALREADY_EXISTS: "Email already registered",
-        };
-        toast.error(errorMap[error.code] || "Registration failed");
-        return;
-      }
-
-      toast.success("Account created and signed in successfully!");
-      await refetch();
-      router.push("/");
-    } catch (err) {
-      setLoading(false);
-      toast.error("An unexpected error occurred during registration.");
+    if (error?.code) {
+      const errorMap: Record<string, string> = {
+        USER_ALREADY_EXISTS: "Email already registered",
+      };
+      toast.error(errorMap[error.code] || "Registration failed");
+      return;
     }
+
+    toast.success("Account created and signed in successfully!");
+    await refetch();
+    router.push("/");
   };
 
   return (
