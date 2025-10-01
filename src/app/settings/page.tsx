@@ -117,7 +117,9 @@ export default function SettingsPage() {
 
         // Email provider settings
         if (data?.email_provider !== undefined) setEmailProvider(data.email_provider as 'smtp' | 'sendgrid' | 'mailgun' || 'smtp');
+        if (data?.sendgrid_api_key !== undefined) setSendgridApiKey(data.sendgrid_api_key || "");
         if (data?.sendgrid_domain_email !== undefined) setSendgridDomainEmail(data.sendgrid_domain_email || "");
+        if (data?.mailgun_api_key !== undefined) setMailgunApiKey(data.mailgun_api_key || "");
         if (data?.mailgun_domain_email !== undefined) setMailgunDomainEmail(data.mailgun_domain_email || "");
       } catch {}
     };

@@ -121,9 +121,9 @@ export async function GET(request: NextRequest) {
       smtp_port: smtpData.smtp_port || null,
       client_hostname: smtpData.client_hostname || null,
       ssl_tls_enabled: smtpData.ssl_tls_enabled || false,
-      sendgrid_api_key: null, // Never return API key for security
+      sendgrid_api_key: smtpData.sendgrid_api_key || null, // Now return actual API key for user settings
       sendgrid_domain_email: smtpData.sendgrid_domain_email || null,
-      mailgun_api_key: null, // Never return API key for security
+      mailgun_api_key: smtpData.mailgun_api_key || null, // Now return actual API key for user settings
       mailgun_domain_email: smtpData.mailgun_domain_email || null,
       // Email format fields
       email_tone: emailData.email_tone || null,
@@ -139,8 +139,6 @@ export async function GET(request: NextRequest) {
       business_pros: businessProsResult || [],
       business_differences: businessDifferencesResult || [],
       // Email provider fields from user table
-      sendgrid_domain: userData.sendgrid_domain || null,
-      mailgun_domain: userData.mailgun_domain || null,
       email_provider: userData.email_provider || null
     };
 
