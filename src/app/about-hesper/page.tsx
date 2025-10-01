@@ -2,6 +2,7 @@
 
 import { Zap, Brain, Crown, MessageCircle, Clock, Shield, Sparkles } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
 
 export default function AboutHesperPage() {
   const [open, setOpen] = useState(false);
@@ -90,7 +91,7 @@ export default function AboutHesperPage() {
             About Hesper
           </h1>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Meet our AI models designed to assist you in different ways. Choose the right model for your needs.
+            Simple AI models for your needs. Pick what fits best.
           </p>
           {/* View usage button */}
           <div className="mt-4 flex justify-center">
@@ -168,8 +169,7 @@ export default function AboutHesperPage() {
             </div>
 
             <p className="text-muted-foreground mb-6">
-              Our foundational AI model designed for fast, reliable responses and general assistance. 
-              Perfect for everyday tasks and quick answers.
+              Fast AI for daily help. Example: Quick answers to "What's the weather?"
             </p>
 
             <div className="space-y-4">
@@ -199,8 +199,7 @@ export default function AboutHesperPage() {
                 <div>
                   <h3 className="font-medium text-sm">Best For</h3>
                   <p className="text-xs text-muted-foreground">
-                    General questions, writing assistance, quick calculations, 
-                    basic research, and everyday AI interactions
+                    Simple questions, writing help, basic math. Example: "Summarize this article."
                   </p>
                 </div>
               </div>
@@ -227,8 +226,7 @@ export default function AboutHesperPage() {
             </div>
 
             <p className="text-muted-foreground mb-6">
-              Our advanced AI model with enhanced reasoning and research capabilities. 
-              Takes time to think through complex problems before providing responses.
+              Smart AI that thinks deeply. Example: "Plan a full marketing strategy."
             </p>
 
             <div className="space-y-4">
@@ -258,8 +256,7 @@ export default function AboutHesperPage() {
                 <div>
                   <h3 className="font-medium text-sm">Best For</h3>
                   <p className="text-xs text-muted-foreground">
-                    Complex analysis, research tasks, strategic planning, 
-                    detailed explanations, and problems requiring deep reasoning
+                    Tough problems, research, planning. Example: "Analyze market trends."
                   </p>
                 </div>
               </div>
@@ -270,10 +267,10 @@ export default function AboutHesperPage() {
                 🧠 Advanced Capabilities
               </h4>
               <ul className="text-xs text-amber-700 space-y-1">
-                <li>• Multi-step reasoning and problem solving</li>
-                <li>• In-depth research and fact verification</li>
-                <li>• Strategic analysis and planning</li>
-                <li>• Complex data interpretation</li>
+                <li>• Step-by-step thinking</li>
+                <li>• Fact-checking research</li>
+                <li>• Business strategies</li>
+                <li>• Data insights</li>
               </ul>
             </div>
           </div>
@@ -300,8 +297,8 @@ export default function AboutHesperPage() {
                 </tr>
                 <tr className="border-b border-border/50">
                   <td className="py-3 font-medium">Free Daily Limit</td>
-                  <td className="text-center py-3">30 messages</td>
-                  <td className="text-center py-3">3 messages</td>
+                  <td className="text-center py-3"><span className="font-bold">30 messages</span></td>
+                  <td className="text-center py-3"><span className="font-bold">3 messages</span></td>
                 </tr>
                 <tr className="border-b border-border/50">
                   <td className="py-3 font-medium">Paid Daily Limit</td>
@@ -320,8 +317,8 @@ export default function AboutHesperPage() {
                 </tr>
                 <tr>
                   <td className="py-3 font-medium">Best Use Cases</td>
-                  <td className="text-center py-3">Quick answers, general help</td>
-                  <td className="text-center py-3">Complex analysis, planning</td>
+                  <td className="text-center py-3">Quick help</td>
+                  <td className="text-center py-3">Deep work</td>
                 </tr>
               </tbody>
             </table>
@@ -347,7 +344,7 @@ export default function AboutHesperPage() {
           </div>
 
           <p className="text-sm text-muted-foreground text-center">
-            Automate tasks efficiently while maintaining control over timing and outputs.
+            Automate smartly with full control.
           </p>
         </div>
 
@@ -356,7 +353,7 @@ export default function AboutHesperPage() {
           <h2 className="text-2xl font-medium mb-6 text-center">Credits Deduction System</h2>
           
           <p className="text-muted-foreground mb-6 text-center">
-            Credits are your unified currency for all Hesper features. While credits are shared across actions, the deduction rates differ based on each feature's computational expense and resource use. This ensures fair pricing for more intensive tasks.
+            One pool of credits for all tools. Rates match effort needed.
           </p>
 
           <div className="grid md:grid-cols-2 gap-6 mb-6">
@@ -364,7 +361,7 @@ export default function AboutHesperPage() {
             <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
               <h3 className="font-medium text-sm mb-2">Lead Generation</h3>
               <p className="text-xs text-blue-800 mb-2">Generate targeted leads efficiently.</p>
-              <div className="bg-white rounded p-2">
+              <div className="bg-white rounded p-2 border border-black">
                 <p className="text-xs font-medium">10 leads = 5 credits</p>
               </div>
             </div>
@@ -373,7 +370,7 @@ export default function AboutHesperPage() {
             <div className="bg-green-50 rounded-lg p-4 border border-green-200">
               <h3 className="font-medium text-sm mb-2">Email Sending</h3>
               <p className="text-xs text-green-800 mb-2">Send bulk emails with ease.</p>
-              <div className="bg-white rounded p-2">
+              <div className="bg-white rounded p-2 border border-black">
                 <p className="text-xs font-medium">15 emails = 5 credits</p>
               </div>
             </div>
@@ -382,7 +379,7 @@ export default function AboutHesperPage() {
             <div className="bg-indigo-50 rounded-lg p-4 border border-indigo-200">
               <h3 className="font-medium text-sm mb-2">Hesper 1.0v Messaging</h3>
               <p className="text-xs text-indigo-800 mb-2">Fast, general AI interactions.</p>
-              <div className="bg-white rounded p-2">
+              <div className="bg-white rounded p-2 border border-black">
                 <p className="text-xs font-medium">20 messages = 5 credits</p>
               </div>
             </div>
@@ -391,22 +388,75 @@ export default function AboutHesperPage() {
             <div className="bg-amber-50 rounded-lg p-4 border border-amber-200">
               <h3 className="font-medium text-sm mb-2">Hesper Pro Messaging</h3>
               <p className="text-xs text-amber-800 mb-2">Advanced reasoning and research.</p>
-              <div className="bg-white rounded p-2">
+              <div className="bg-white rounded p-2 border border-black">
                 <p className="text-xs font-medium">12 messages = 8 credits</p>
               </div>
             </div>
           </div>
 
           <p className="text-sm text-muted-foreground text-center">
-            Note: Daily message limits (free/paid) cap usage per model, while credits deduct based on these rates. Credits do not expire and are shared—use them wisely across features!
+            Daily caps per model. Credits last forever—use across all!
           </p>
+        </div>
+
+        {/* Hesper vs Normal CRMs & AI */}
+        <div className="bg-card rounded-xl border border-border p-8 mb-12">
+          <h2 className="text-2xl font-medium mb-6 text-center">Hesper vs Normal CRMs & AI</h2>
+          
+          <p className="text-muted-foreground mb-6 text-center">
+            Hesper saves time and boosts results compared to traditional tools. Example: Generate 10 qualified leads in minutes, not hours.
+          </p>
+
+          <div className="grid md:grid-cols-2 gap-8 mb-6">
+            {/* CRM Comparison */}
+            <div>
+              <h3 className="font-medium mb-4 text-center">Task Automation</h3>
+              <div className="flex gap-2 justify-center mb-2">
+                <div className="text-xs border border-black p-1 rounded">Normal CRM: 40% Automated</div>
+                <div className="text-xs bg-green-100 border border-black p-1 rounded">Hesper: 80% Automated</div>
+              </div>
+              <ResponsiveContainer width="100%" height={200}>
+                <PieChart>
+                  <Pie data={crmData} cx="50%" cy="50%" outerRadius={60} fill="#8884d8" dataKey="value">
+                    {crmData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+              <p className="text-xs text-center mt-2">Example: Manual data entry vs Hesper's auto-lead finding.</p>
+            </div>
+
+            {/* AI Comparison */}
+            <div>
+              <h3 className="font-medium mb-4 text-center">Research Depth</h3>
+              <div className="flex gap-2 justify-center mb-2">
+                <div className="text-xs border border-black p-1 rounded">Normal AI: 50% Deep</div>
+                <div className="text-xs bg-green-100 border border-black p-1 rounded">Hesper Pro: 90% Deep</div>
+              </div>
+              <ResponsiveContainer width="100%" height={200}>
+                <PieChart>
+                  <Pie data={aiData} cx="50%" cy="50%" outerRadius={60} fill="#8884d8" dataKey="value">
+                    {aiData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+              <p className="text-xs text-center mt-2">Example: Basic summaries vs Pro's multi-step analysis.</p>
+            </div>
+          </div>
         </div>
 
         {/* Subscription Info */}
         <div className="text-center bg-primary/5 rounded-xl p-8 border border-primary/20">
           <h2 className="text-xl font-medium mb-4">Want More Messages?</h2>
           <p className="text-muted-foreground mb-6">
-            Upgrade to a paid subscription to unlock higher daily limits for both models.
+            Get more with paid plans.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <a 
@@ -429,17 +479,17 @@ export default function AboutHesperPage() {
           <div className="bg-card rounded-xl border border-border p-6">
             <h3 className="text-lg font-medium mb-3">Reliability & Privacy</h3>
             <ul className="text-sm text-muted-foreground space-y-2">
-              <li>• We do not train on your personal chats.</li>
-              <li>• Sessions auto-expire after inactivity to protect your data.</li>
-              <li>• Rate limiting keeps the service stable across models.</li>
+              <li>• No training on your chats</li>
+              <li>• Auto-delete inactive sessions</li>
+              <li>• Limits for smooth use</li>
             </ul>
           </div>
           <div className="bg-card rounded-xl border border-border p-6">
             <h3 className="text-lg font-medium mb-3">Latency & Limits</h3>
             <ul className="text-sm text-muted-foreground space-y-2">
-              <li>• Hesper 1.0v: 1–3s typical latency</li>
-              <li>• Hesper Pro: 10–30s thoughtful responses</li>
-              <li>• Daily quotas reset at midnight UTC</li>
+              <li>• 1.0v: 1-3s fast</li>
+              <li>• Pro: 10-30s deep think</li>
+              <li>• Reset at midnight UTC</li>
             </ul>
           </div>
         </div>
@@ -448,33 +498,25 @@ export default function AboutHesperPage() {
           <div className="bg-card rounded-xl border border-border p-6">
             <h3 className="text-lg font-medium mb-3">Roadmap</h3>
             <ul className="text-sm text-muted-foreground space-y-2">
-              <li>• File uploads and document Q&A</li>
-              <li>• Image understanding and visual reasoning</li>
-              <li>• Workspace sharing and team plans</li>
+              <li>• File Q&A</li>
+              <li>• Image analysis</li>
+              <li>• Team sharing</li>
             </ul>
           </div>
           <div className="bg-card rounded-xl border border-border p-6">
             <h3 className="text-lg font-medium mb-3">FAQ</h3>
             <div className="space-y-3 text-sm text-muted-foreground">
               <div>
-                <p className="font-medium text-foreground">How do credits work across features?</p>
-                <p>Credits are a single pool for all actions (leads, emails, messaging). Deductions vary by feature—e.g., 10 leads or 20 Hesper 1.0v messages cost 5 credits, while Hesper Pro is more expensive per message due to advanced processing.</p>
+                <p className="font-medium text-foreground">How do credits work?</p>
+                <p>Shared pool for leads, emails, chats. Example: 10 leads = 5 credits, like 20 fast messages.</p>
               </div>
               <div>
-                <p className="font-medium text-foreground">Is Pro required for complex tasks?</p>
-                <p>Not always. Start with 1.0v for quick help; upgrade to Pro for deeper reasoning or research. Credits deduct differently, so Pro uses more for its enhanced capabilities.</p>
+                <p className="font-medium text-foreground">When to use Pro?</p>
+                <p>For deep tasks. Fast model for simple stuff. Pro costs more credits but gives better results.</p>
               </div>
               <div>
-                <p className="font-medium text-foreground">Do messages roll over?</p>
-                <p>No. Daily limits reset at midnight UTC, but unused credits carry over indefinitely. Focus on high-value actions to maximize value.</p>
-              </div>
-              <div>
-                <p className="font-medium text-foreground">What happens if I run out of credits?</p>
-                <p>You'll hit your daily limits or see a low-balance warning. Purchase more via subscriptions or add-ons—no interruptions, just plan ahead for intensive use.</p>
-              </div>
-              <div>
-                <p className="font-medium text-foreground">Are credits shared between models?</p>
-                <p>Yes, credits are universal. The key difference: Hesper 1.0v gives more messages per credit (20 for 5), while Pro offers quality at a premium (12 for 8), matching their respective strengths.</p>
+                <p className="font-medium text-foreground">What if I run out?</p>
+                <p>Hit daily limits. Buy more anytime—no stops, just upgrade.</p>
               </div>
             </div>
           </div>
@@ -483,9 +525,9 @@ export default function AboutHesperPage() {
         {/* Footer */}
         <div className="text-center mt-12 text-sm text-muted-foreground">
           <p>
-            Have questions about our models? 
+            Questions? 
             <a href="mailto:support@hesper.ai" className="text-primary hover:underline ml-1">
-              Contact our support team
+              Email support
             </a>
           </p>
         </div>
