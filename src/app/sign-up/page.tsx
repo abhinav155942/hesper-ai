@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { signUp, useSession } from "@/lib/auth-client";
 import { toast } from "sonner";
 import Link from "next/link";
-import { Check, X, Eye, EyeOff } from "lucide-react";
+import { User, Mail, Shield, Zap, BarChart3, Send } from "lucide-react";
 
 export default function SignUpPage() {
   const { refetch } = useSession();
@@ -20,77 +20,14 @@ export default function SignUpPage() {
     confirmPassword: "",
   });
   const [loading, setLoading] = useState(false);
-  const [passwordError, setPasswordError] = useState("");
   const router = useRouter();
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [passwordStrength, setPasswordStrength] = useState({
-    length: false,
-    number: false,
-    special: false,
-  });
 
-  const isValidPassword = (password: string): boolean => {
-    const lengthCheck = password.length >= 8;
-    const hasNumber = /\d/.test(password);
-    const hasSpecial = /[!@#$%^&*()_+{}[\]:;<>,.?~\\/-]/.test(password);
-    return lengthCheck && hasNumber && hasSpecial;
-  };
-
-  const generatePassword = (): string => {
-    const uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    const lowercase = "abcdefghijklmnopqrstuvwxyz";
-    const numbers = "0123456789";
-    const specials = "!@#$%^&*()_+{}[]:;<>,.?/~`";
-    const allChars = uppercase + lowercase + numbers + specials;
-    let password = "";
-    // Ensure one of each required
-    password += uppercase.charAt(Math.floor(Math.random() * uppercase.length));
-    password += lowercase.charAt(Math.floor(Math.random() * lowercase.length));
-    password += numbers.charAt(Math.floor(Math.random() * numbers.length));
-    password += specials.charAt(Math.floor(Math.random() * specials.length));
-    // Fill remaining to 12 chars
-    for (let i = 4; i < 12; i++) {
-      password += allChars.charAt(Math.floor(Math.random() * allChars.length));
-    }
-    // Shuffle
-    return password.split("").sort(() => Math.random() - 0.5).join("");
-  };
-
-  const updatePasswordStrength = (password: string) => {
-    const lengthCheck = password.length >= 8;
-    const hasNumber = /\d/.test(password);
-    const hasSpecial = /[!@#$%^&*()_+{}[\]:;<>,.?~\\/-]/.test(password);
-    setPasswordStrength({ length: lengthCheck, number: hasNumber, special: hasSpecial });
-    return { length: lengthCheck, number: hasNumber, special: hasSpecial };
-  };
-
-  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newPassword = e.target.value;
-    setFormData({ ...formData, password: newPassword });
-    const strength = updatePasswordStrength(newPassword);
-    if (newPassword) {
-      if (!strength.length) {
-        setPasswordError("Password must be more than 8 digits");
-      } else if (!strength.number || !strength.special) {
-        setPasswordError("Set your password more strong");
-      } else {
-        setPasswordError("");
-      }
-    } else {
-      setPasswordError("");
-      setPasswordStrength({ length: false, number: false, special: false });
-    }
-  };
-
-  const handleGeneratePassword = () => {
-    const newPassword = generatePassword();
-    setFormData({ 
-      ...formData, 
-      password: newPassword,
-      confirmPassword: newPassword 
-    });
-    setPasswordError("");
+  const validatePassword = (password: string): string[] => {
+    const errors: string[] = [];
+    if (password.length < 8) errors.push("Password must be at least 8 characters long.");
+    if (!/[0-9]/.test(password)) errors.push("Password must contain at least one number.");
+    if (!/[!@#$%^&*(),.?\":{}|<>]/.test(password)) errors.push("Password must contain at least one special character.");
+    return errors;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -99,12 +36,9 @@ export default function SignUpPage() {
       toast.error("Passwords do not match.");
       return;
     }
-    const strength = updatePasswordStrength(formData.password);
-    if (!strength.length) {
-      toast.error("Password must be more than 8 digits");
-      return;
-    } else if (!strength.number || !strength.special) {
-      toast.error("Set your password more strong");
+    const passwordErrors = validatePassword(formData.password);
+    if (passwordErrors.length > 0) {
+      toast.error("Set your password more strong: " + passwordErrors.join(", "));
       return;
     }
     setLoading(true);
@@ -130,116 +64,157 @@ export default function SignUpPage() {
     router.push("/");
   };
 
+  // Auto-check requirements
+  const passwordChecks = [
+    { label: "At least 8 characters", check: formData.password.length >= 8 },
+    { label: "Contains a number", check: /[0-9]/.test(formData.password) },
+    { label: "Contains a special character", check: /[!@#$%^&*(),.?\":{}|<>]/.test(formData.password) },
+  ];
+
+  const allChecksPass = passwordChecks.every(check => check.check);
+
+  const features = [
+    {
+      icon: BarChart3,
+      title: "AI-Powered Lead Generation",
+      description: "Generate high-quality leads tailored to your business needs with our advanced Hesper AI models."
+    },
+    {
+      icon: Send,
+      title: "Smart Email Automation",
+      description: "Send personalized emails efficiently, with credit-based scaling to match your volume requirements."
+    },
+    {
+      icon: Zap,
+      title: "Dual AI Models",
+      description: "Choose between Hesper 1.0v for everyday tasks or Hesper Pro for complex business intelligence."
+    },
+    {
+      icon: Shield,
+      title: "Secure & Scalable",
+      description: "Enterprise-grade security with fair usage credits, ensuring reliable performance for your team."
+    }
+  ];
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background py-12 px-4 sm:px-6 lg:px-8">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl">Sign up</CardTitle>
-          <CardDescription>
-            Create a new account to get started.
-          </CardDescription>
-        </CardHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="name">Name</Label>
-            <Input
-              id="name"
-              type="text"
-              placeholder="Enter your name"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="Enter your email"
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <div className="flex gap-2">
-              <Input
-                id="password"
-                type={showPassword ? "text" : "password"}
-                placeholder="Enter your password"
-                value={formData.password}
-                onChange={handlePasswordChange}
-                autoComplete="new-password"
-                required
-                className={passwordError ? "border-destructive" : ""}
-              />
-              <Button type="button" variant="outline" size="sm" onClick={handleGeneratePassword}>
-                Generate
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setShowPassword(!showPassword)}
-              >
-                {showPassword ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
-              </Button>
+    <div className="min-h-screen bg-background">
+      <div className="container mx-auto px-4 py-12">
+        <div className="flex flex-col lg:flex-row gap-8 items-center justify-center">
+          {/* Marketing Section */}
+          <div className="lg:w-1/2 space-y-6">
+            <div className="text-center lg:text-left">
+              <h1 className="text-4xl md:text-5xl font-light text-foreground mb-2">Join Hesper</h1>
+              <p className="text-2xl md:text-3xl text-primary mb-6">Unlock AI for Your Business</p>
+              <p className="text-muted-foreground text-lg">Get started today and transform how you generate leads, communicate, and grow with intelligent AI tools built for efficiency.</p>
             </div>
-            {formData.password && (
-              <div className="space-y-1 pl-2">
-                <div className="flex items-center gap-2 text-xs">
-                  <Check className={passwordStrength.length ? "h-3 w-3 text-green-500" : "h-3 w-3 text-destructive"} />
-                  <span className={!passwordStrength.length ? "text-destructive" : ""}>At least 8 characters</span>
-                </div>
-                <div className="flex items-center gap-2 text-xs">
-                  <Check className={passwordStrength.number ? "h-3 w-3 text-green-500" : "h-3 w-3 text-destructive"} />
-                  <span className={!passwordStrength.number ? "text-destructive" : ""}>Contains a number</span>
-                </div>
-                <div className="flex items-center gap-2 text-xs">
-                  <Check className={passwordStrength.special ? "h-3 w-3 text-green-500" : "h-3 w-3 text-destructive"} />
-                  <span className={!passwordStrength.special ? "text-destructive" : ""}>Contains a special character</span>
-                </div>
+            {/* Feature Carousel */}
+            <div className="relative">
+              <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide snap-x snap-mandatory">
+                {features.map((feature, index) => {
+                  const Icon = feature.icon;
+                  return (
+                    <div key={index} className="flex-none w-64 bg-card rounded-lg p-4 shadow-sm border snap-center">
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="p-2 bg-primary/10 rounded-full">
+                          <Icon className="h-5 w-5 text-primary" />
+                        </div>
+                        <h3 className="font-medium text-foreground">{feature.title}</h3>
+                      </div>
+                      <p className="text-sm text-muted-foreground">{feature.description}</p>
+                    </div>
+                  );
+                })}
               </div>
-            )}
-            {passwordError && (
-              <p className="text-sm text-destructive">{passwordError}</p>
-            )}
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="confirmPassword">Confirm Password</Label>
-            <div className="flex gap-2">
-              <Input
-                id="confirmPassword"
-                type={showConfirmPassword ? "text" : "password"}
-                placeholder="Confirm your password"
-                value={formData.confirmPassword}
-                onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                autoComplete="new-password"
-                required
-              />
-              <div className="w-10" /> {/* Spacer for alignment */}
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-              >
-                {showConfirmPassword ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
-              </Button>
             </div>
           </div>
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? "Creating account..." : "Create account"}
-          </Button>
-        </form>
-        <CardFooter className="flex flex-col space-y-2">
-          <Link href="/sign-in" className="text-sm text-center text-primary underline-offset-2 hover:underline">
-            Already have an account? Sign in
-          </Link>
-        </CardFooter>
-      </Card>
+          {/* Form Section */}
+          <div className="lg:w-1/2 max-w-md">
+            <Card className="w-full">
+              <CardHeader className="space-y-1">
+                <CardTitle className="text-2xl">Sign up</CardTitle>
+                <CardDescription>
+                  Create a new account to get started with Hesper.
+                </CardDescription>
+              </CardHeader>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name">
+                    <User className="h-4 w-4 inline mr-2" />
+                    Name
+                  </Label>
+                  <Input
+                    id="name"
+                    type="text"
+                    placeholder="Enter your name"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="email">
+                    <Mail className="h-4 w-4 inline mr-2" />
+                    Email
+                  </Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="Enter your email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="password">
+                    <Shield className="h-4 w-4 inline mr-2" />
+                    Password
+                  </Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="Enter your password"
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    autoComplete="new-password"
+                    required
+                  />
+                  {/* Password Requirements */}
+                  <div className={`mt-2 p-2 bg-muted/50 rounded-md text-sm ${allChecksPass ? 'text-green-600' : 'text-destructive'}`}>
+                    <ul className="space-y-1">
+                      {passwordChecks.map((check, idx) => (
+                        <li key={idx} className={`flex items-center gap-2 ${check.check ? 'text-green-600' : 'text-destructive'}`}>
+                          {check.check ? '✓' : '✗'} {check.label}
+                        </li>
+                      ))}
+                    </ul>
+                    {!allChecksPass && <p className="mt-1 font-medium">Password must be more than 8 digits and strong</p>}
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPassword">Confirm Password</Label>
+                  <Input
+                    id="confirmPassword"
+                    type="password"
+                    placeholder="Confirm your password"
+                    value={formData.confirmPassword}
+                    onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                    required
+                  />
+                </div>
+                <Button type="submit" className="w-full" disabled={loading || formData.password !== formData.confirmPassword || !allChecksPass}>
+                  {loading ? "Creating account..." : "Create account"}
+                </Button>
+              </form>
+              <CardFooter className="flex flex-col space-y-2">
+                <Link href="/sign-in" className="text-sm text-center text-primary underline-offset-2 hover:underline">
+                  Already have an account? <span className="font-medium">Sign in</span>
+                </Link>
+              </CardFooter>
+            </Card>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
