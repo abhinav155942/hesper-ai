@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { signIn, useSession } from "@/lib/auth-client";
 import { toast } from "sonner";
 import Link from "next/link";
+import { Eye, EyeOff } from "lucide-react";
 
 export default function SignInPage() {
   const [formData, setFormData] = useState({
@@ -17,6 +18,7 @@ export default function SignInPage() {
   });
   const [loading, setLoading] = useState(false);
   const [passwordError, setPasswordError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
   const { refetch } = useSession();
 
@@ -121,7 +123,7 @@ export default function SignInPage() {
             <div className="flex gap-2">
               <Input
                 id="password"
-                type="password"
+                type={showPassword ? "text" : "password"}
                 placeholder="Enter your password"
                 value={formData.password}
                 onChange={handlePasswordChange}
@@ -131,6 +133,14 @@ export default function SignInPage() {
               />
               <Button type="button" variant="outline" size="sm" onClick={handleGeneratePassword}>
                 Generate
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                {showPassword ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
               </Button>
             </div>
             {passwordError && (

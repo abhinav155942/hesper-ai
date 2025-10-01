@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { signUp, useSession } from "@/lib/auth-client";
 import { toast } from "sonner";
 import Link from "next/link";
+import { Eye, EyeOff } from "lucide-react";
 
 export default function SignUpPage() {
   const { refetch } = useSession();
@@ -21,6 +22,8 @@ export default function SignUpPage() {
   const [loading, setLoading] = useState(false);
   const [passwordError, setPasswordError] = useState("");
   const router = useRouter();
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const isValidPassword = (password: string): boolean => {
     const lengthCheck = password.length >= 8;
@@ -143,7 +146,7 @@ export default function SignUpPage() {
             <div className="flex gap-2">
               <Input
                 id="password"
-                type="password"
+                type={showPassword ? "text" : "password"}
                 placeholder="Enter your password"
                 value={formData.password}
                 onChange={handlePasswordChange}
@@ -154,6 +157,14 @@ export default function SignUpPage() {
               <Button type="button" variant="outline" size="sm" onClick={handleGeneratePassword}>
                 Generate
               </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                {showPassword ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+              </Button>
             </div>
             {passwordError && (
               <p className="text-sm text-destructive">{passwordError}</p>
@@ -161,15 +172,26 @@ export default function SignUpPage() {
           </div>
           <div className="space-y-2">
             <Label htmlFor="confirmPassword">Confirm Password</Label>
-            <Input
-              id="confirmPassword"
-              type="password"
-              placeholder="Confirm your password"
-              value={formData.confirmPassword}
-              onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-              autoComplete="new-password"
-              required
-            />
+            <div className="flex gap-2">
+              <Input
+                id="confirmPassword"
+                type={showConfirmPassword ? "text" : "password"}
+                placeholder="Confirm your password"
+                value={formData.confirmPassword}
+                onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                autoComplete="new-password"
+                required
+              />
+              <div className="w-10" /> {/* Spacer for alignment */}
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              >
+                {showConfirmPassword ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+              </Button>
+            </div>
           </div>
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? "Creating account..." : "Create account"}
