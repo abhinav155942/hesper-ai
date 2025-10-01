@@ -2,9 +2,10 @@
 
 import * as React from "react";
 import { useState, useEffect, useRef } from "react";
-import { Mic } from 'lucide-react';
+import { Mic, Radio } from 'lucide-react';
 import { toast } from "sonner";
-import ChatInterface from "@/components/chat/chat-interface";
+import { ChatInterface } from "@/components/chat/chat-interface";
+import { useRouter } from "next/navigation";
 
 interface MainContentProps {
   selectedModel?: 'hesper-1.0v' | 'hesper-pro';
@@ -175,18 +176,26 @@ export default function MainContent({
                   placeholder="Ask Hesper"
                   className="flex-grow bg-transparent text-base md:text-lg text-foreground placeholder-muted-foreground outline-none border-none py-3 px-2 sm:px-4" />
 
-
                 <button
                   type="button"
                   onClick={toggleRecording}
                   disabled={isRecording}
                   className={`p-2 rounded-full transition-colors ${isRecording ? 'animate-pulse bg-primary/10 text-primary' : 'hover:bg-muted/80'}`}
                   aria-label={isRecording ? "Stop microphone" : "Use microphone"}>
-
                   <Mic className={`h-6 w-6 ${isRecording ? 'text-primary' : 'text-foreground/80'}`} />
                 </button>
               </div>
             </form>
+          </div>
+
+          <div className="mt-6">
+            <button
+              onClick={() => window.location.href = '/voice'}
+              className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#5f3dc4] via-[#ff6b6b] to-[#4ecdc4] text-white rounded-full font-medium text-base hover:shadow-lg transition-all duration-200 hover:scale-105"
+            >
+              <Radio className="h-5 w-5" />
+              Hesper Live
+            </button>
           </div>
 
         </div>
