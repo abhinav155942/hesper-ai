@@ -328,6 +328,29 @@ export default function AboutHesperPage() {
           </div>
         </div>
 
+        {/* Hesper Pro Agent Capabilities Card */}
+        <div className="bg-card rounded-xl border border-border p-8 mb-12">
+          <h2 className="text-2xl font-medium mb-6 text-center">Hesper Pro: Your Advanced AI Agent</h2>
+          
+          <p className="text-muted-foreground mb-6 text-center">
+            Hesper Pro acts as a versatile AI agent, handling complex workflows beyond basic chat.
+          </p>
+
+          <div className="border border-black p-6 rounded-lg mb-6">
+            <ul className="text-sm space-y-2">
+              <li>• Lead finding and generation</li>
+              <li>• Bulk or targeted email sending with custom intervals (e.g., 2-min gaps)</li>
+              <li>• Web search and deep research planning</li>
+              <li>• Realtime data analysis</li>
+              <li>• Plus all standard AI capabilities: writing, coding, calculations</li>
+            </ul>
+          </div>
+
+          <p className="text-sm text-muted-foreground text-center">
+            Automate tasks efficiently while maintaining control over timing and outputs.
+          </p>
+        </div>
+
         {/* Credits Deduction System - NEW SECTION */}
         <div className="bg-card rounded-xl border border-border p-8 mb-12 mt-8">
           <h2 className="text-2xl font-medium mb-6 text-center">Credits Deduction System</h2>
