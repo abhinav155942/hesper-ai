@@ -507,7 +507,7 @@ export default function SettingsPage() {
               <Button type="button" onClick={handleSaveEmailFormat} disabled={savingEmailFormat}>
                 {savingEmailFormat ? "Saving..." : "Save Email Format"}
               </Button>
-              <p className="text-xs text-muted-foreground">Every update sends each field separately to the webhook and is saved in the database.</p>
+              <p className="text-xs text-muted-foreground">Every update sends each field separately to the server and is saved in the database.</p>
             </div>
           </div>
 
@@ -526,7 +526,7 @@ export default function SettingsPage() {
               <Button type="button" onClick={handleSaveBusinessIntro} disabled={savingBusinessIntro}>
                 {savingBusinessIntro ? "Saving..." : "Save Business Intro"}
               </Button>
-              <p className="text-xs text-muted-foreground">Updates are saved and sent to the webhook separately per field.</p>
+              <p className="text-xs text-muted-foreground">Updates are saved and sent to the server separately per field.</p>
             </div>
           </div>
 
@@ -559,7 +559,7 @@ export default function SettingsPage() {
                 </ul>
               </div>
             </div>
-            <p className="text-xs text-muted-foreground">Each new entry is saved and the value is sent to the webhook as a separate string.</p>
+            <p className="text-xs text-muted-foreground">Each new entry is saved and the value is sent to the server as a separate string.</p>
           </div>
         </CardContent>
 
@@ -567,11 +567,6 @@ export default function SettingsPage() {
           <Button variant="destructive" onClick={handleSignOut} disabled={signingOut} className="w-full">
             {signingOut ? "Signing out..." : "Log out"}
           </Button>
-          {!session?.user?.emailVerified && (
-            <p className="text-xs text-muted-foreground text-center">
-              Your email is not verified yet. Please check your inbox.
-            </p>
-          )}
           <Link href="/" className="text-sm text-center text-primary underline-offset-2 hover:underline">
             Back to Home
           </Link>

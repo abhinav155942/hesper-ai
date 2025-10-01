@@ -28,10 +28,12 @@ export default function MainContent({
   const [inputValue, setInputValue] = useState("");
   const [credits, setCredits] = useState(0);
   const [isRecording, setIsRecording] = useState(false);
+  const [showNote, setShowNote] = useState(false);
+  const [settings, setSettings] = useState(null);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const { data: session } = useSession();
-  const firstName = session?.user?.name?.split(' ')[0] || '';
-  const isSignedIn = !!session?.user && !!firstName;
+  const name = session?.user?.name?.split(' ')[0] || 'Friend';
+  const isSignedIn = !!session?.user && !!name;
 
   useEffect(() => {
     if (externalChatMode !== undefined) {
@@ -73,6 +75,31 @@ export default function MainContent({
       toast.error("Failed to fetch credits");
     }
   };
+
+  useEffect(() => {
+    if (!session?.user?.id) return;
+    const fetchSettings = async () => {
+      const token = localStorage.getItem("bearer_token");
+      if (!token) return;
+      try {
+        const res = await fetch("/api/settings/all", {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setSettings(data);
+          // Check if basic info filled: name in session, and any email provider config
+          const basicFilled = !!session?.user?.name && (
+            data.smtp_username || data.smtp_host || data.sendgrid_domain_email || data.mailgun_domain_email
+          ) && (data.email_tone || data.user_name || data.business_description);
+          setShowNote(!basicFilled);
+        }
+      } catch (err) {
+        console.error('Failed to fetch settings for note', err);
+      }
+    };
+    fetchSettings();
+  }, [session]);
 
   const handleInputSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -164,10 +191,10 @@ export default function MainContent({
             {isSignedIn ? (
               <>
                 <h1 className="font-['Google_Sans'] font-normal text-4xl sm:text-5xl md:text-[56px] leading-[1.15] text-foreground/80">
-                  Hi {firstName},
+                  Hi <span className="bg-gradient-to-r from-[#5f3dc4] via-[#ff6b6b] to-[#4ecdc4] bg-clip-text text-transparent">{name},</span>
                 </h1>
                 <h2 className="font-['Google_Sans'] font-normal text-4xl sm:text-5xl md:text-[56px] leading-[1.15] text-foreground/80 mt-1">
-                  {selectedModel === 'hesper-pro' ? 'Ready to finish a task?' : "what's the agenda today?"}
+                  <span className="bg-gradient-to-r from-[#5f3dc4] via-[#ff6b6b] to-[#4ecdc4] bg-clip-text text-transparent">{selectedModel === 'hesper-pro' ? 'Ready to finish a task?' : "what's the agenda today?"}</span>
                 </h2>
               </>
             ) : (
@@ -181,6 +208,15 @@ export default function MainContent({
               </>
             )}
           </div>
+
+          {isSignedIn && showNote && (
+            <div className="mb-6 p-4 bg-secondary rounded-lg border border-border">
+              <p className="text-sm text-muted-foreground mb-2">To get the best results, finish configuring all your settings.</p>
+              <Button asChild variant="outline" size="sm">
+                <Link href="/settings">Complete Settings</Link>
+              </Button>
+            </div>
+          )}
 
           <div className="w-full max-w-[768px] mb-4">
             <form onSubmit={handleInputSubmit}>
