@@ -52,32 +52,10 @@ export default function SignInPage() {
   const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newPassword = e.target.value;
     setFormData({ ...formData, password: newPassword });
-    if (newPassword) {
-      if (!isValidPassword(newPassword)) {
-        setPasswordError("Password must be at least 8 characters, contain a number, and a special character.");
-      } else {
-        setPasswordError("");
-      }
-    } else {
-      setPasswordError("");
-    }
-  };
-
-  const handleGeneratePassword = () => {
-    const newPassword = generatePassword();
-    setFormData({ 
-      ...formData, 
-      password: newPassword 
-    });
-    setPasswordError("");
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (formData.password && !isValidPassword(formData.password)) {
-      toast.error("Password must meet the requirements.");
-      return;
-    }
     setLoading(true);
 
     const { data, error } = await signIn.email({
@@ -88,12 +66,11 @@ export default function SignInPage() {
     setLoading(false);
 
     if (error?.code) {
-      toast.error("Invalid email or password. Please make sure you have already registered an account and try again.");
+      toast.error("Invalid email or password.");
       return;
     }
 
     toast.success("Signed in successfully!");
-    await refetch();
     router.push("/");
   };
 
@@ -129,11 +106,7 @@ export default function SignInPage() {
                 onChange={handlePasswordChange}
                 autoComplete="current-password"
                 required
-                className={passwordError ? "border-destructive" : ""}
               />
-              <Button type="button" variant="outline" size="sm" onClick={handleGeneratePassword}>
-                Generate
-              </Button>
               <Button
                 type="button"
                 variant="outline"
@@ -143,9 +116,6 @@ export default function SignInPage() {
                 {showPassword ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
               </Button>
             </div>
-            {passwordError && (
-              <p className="text-sm text-destructive">{passwordError}</p>
-            )}
           </div>
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? "Signing in..." : "Sign in"}

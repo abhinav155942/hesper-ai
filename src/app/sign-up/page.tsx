@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { signUp, useSession } from "@/lib/auth-client";
 import { toast } from "sonner";
 import Link from "next/link";
-import { Eye, EyeOff } from "lucide-react";
+import { Check, X, Eye, EyeOff } from "lucide-react";
 
 export default function SignUpPage() {
   const { refetch } = useSession();
@@ -24,6 +24,11 @@ export default function SignUpPage() {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [passwordStrength, setPasswordStrength] = useState({
+    length: false,
+    number: false,
+    special: false,
+  });
 
   const isValidPassword = (password: string): boolean => {
     const lengthCheck = password.length >= 8;
@@ -52,17 +57,29 @@ export default function SignUpPage() {
     return password.split("").sort(() => Math.random() - 0.5).join("");
   };
 
+  const updatePasswordStrength = (password: string) => {
+    const lengthCheck = password.length >= 8;
+    const hasNumber = /\d/.test(password);
+    const hasSpecial = /[!@#$%^&*()_+{}[\]:;<>,.?~\\/-]/.test(password);
+    setPasswordStrength({ length: lengthCheck, number: hasNumber, special: hasSpecial });
+    return { length: lengthCheck, number: hasNumber, special: hasSpecial };
+  };
+
   const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newPassword = e.target.value;
     setFormData({ ...formData, password: newPassword });
+    const strength = updatePasswordStrength(newPassword);
     if (newPassword) {
-      if (!isValidPassword(newPassword)) {
-        setPasswordError("Password must be at least 8 characters, contain a number, and a special character.");
+      if (!strength.length) {
+        setPasswordError("Password must be more than 8 digits");
+      } else if (!strength.number || !strength.special) {
+        setPasswordError("Set your password more strong");
       } else {
         setPasswordError("");
       }
     } else {
       setPasswordError("");
+      setPasswordStrength({ length: false, number: false, special: false });
     }
   };
 
@@ -82,8 +99,12 @@ export default function SignUpPage() {
       toast.error("Passwords do not match.");
       return;
     }
-    if (formData.password && !isValidPassword(formData.password)) {
-      toast.error("Password must meet the requirements.");
+    const strength = updatePasswordStrength(formData.password);
+    if (!strength.length) {
+      toast.error("Password must be more than 8 digits");
+      return;
+    } else if (!strength.number || !strength.special) {
+      toast.error("Set your password more strong");
       return;
     }
     setLoading(true);
@@ -166,6 +187,22 @@ export default function SignUpPage() {
                 {showPassword ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
               </Button>
             </div>
+            {formData.password && (
+              <div className="space-y-1 pl-2">
+                <div className="flex items-center gap-2 text-xs">
+                  <Check className={passwordStrength.length ? "h-3 w-3 text-green-500" : "h-3 w-3 text-destructive"} />
+                  <span className={!passwordStrength.length ? "text-destructive" : ""}>At least 8 characters</span>
+                </div>
+                <div className="flex items-center gap-2 text-xs">
+                  <Check className={passwordStrength.number ? "h-3 w-3 text-green-500" : "h-3 w-3 text-destructive"} />
+                  <span className={!passwordStrength.number ? "text-destructive" : ""}>Contains a number</span>
+                </div>
+                <div className="flex items-center gap-2 text-xs">
+                  <Check className={passwordStrength.special ? "h-3 w-3 text-green-500" : "h-3 w-3 text-destructive"} />
+                  <span className={!passwordStrength.special ? "text-destructive" : ""}>Contains a special character</span>
+                </div>
+              </div>
+            )}
             {passwordError && (
               <p className="text-sm text-destructive">{passwordError}</p>
             )}
