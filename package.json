@@ -89,7 +89,7 @@
         "react-rough-notation": "^1.0.5",
         "react-syntax-highlighter": "^15.6.1",
         "react-wrap-balancer": "^1.1.1",
-        "recharts": "^3.0.2",
+        "recharts": "^3.2.1",
         "resend": "^6.1.0",
         "simplex-noise": "^4.0.3",
         "sonner": "^2.0.6",
