@@ -19,12 +19,68 @@ export default function SignUpPage() {
     confirmPassword: "",
   });
   const [loading, setLoading] = useState(false);
+  const [passwordError, setPasswordError] = useState("");
   const router = useRouter();
+
+  const isValidPassword = (password: string): boolean => {
+    const lengthCheck = password.length >= 8;
+    const hasNumber = /\d/.test(password);
+    const hasSpecial = /[!@#$%^&*()_+{}[\]:;<>,.?~\\/-]/.test(password);
+    return lengthCheck && hasNumber && hasSpecial;
+  };
+
+  const generatePassword = (): string => {
+    const uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    const lowercase = "abcdefghijklmnopqrstuvwxyz";
+    const numbers = "0123456789";
+    const specials = "!@#$%^&*()_+{}[]:;<>,.?/~`";
+    const allChars = uppercase + lowercase + numbers + specials;
+    let password = "";
+    // Ensure one of each required
+    password += uppercase.charAt(Math.floor(Math.random() * uppercase.length));
+    password += lowercase.charAt(Math.floor(Math.random() * lowercase.length));
+    password += numbers.charAt(Math.floor(Math.random() * numbers.length));
+    password += specials.charAt(Math.floor(Math.random() * specials.length));
+    // Fill remaining to 12 chars
+    for (let i = 4; i < 12; i++) {
+      password += allChars.charAt(Math.floor(Math.random() * allChars.length));
+    }
+    // Shuffle
+    return password.split("").sort(() => Math.random() - 0.5).join("");
+  };
+
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newPassword = e.target.value;
+    setFormData({ ...formData, password: newPassword });
+    if (newPassword) {
+      if (!isValidPassword(newPassword)) {
+        setPasswordError("Password must be at least 8 characters, contain a number, and a special character.");
+      } else {
+        setPasswordError("");
+      }
+    } else {
+      setPasswordError("");
+    }
+  };
+
+  const handleGeneratePassword = () => {
+    const newPassword = generatePassword();
+    setFormData({ 
+      ...formData, 
+      password: newPassword,
+      confirmPassword: newPassword 
+    });
+    setPasswordError("");
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (formData.password !== formData.confirmPassword) {
       toast.error("Passwords do not match.");
+      return;
+    }
+    if (formData.password && !isValidPassword(formData.password)) {
+      toast.error("Password must meet the requirements.");
       return;
     }
     setLoading(true);
@@ -84,15 +140,24 @@ export default function SignUpPage() {
           </div>
           <div className="space-y-2">
             <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
-              type="password"
-              placeholder="Enter your password"
-              value={formData.password}
-              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-              autoComplete="new-password"
-              required
-            />
+            <div className="flex gap-2">
+              <Input
+                id="password"
+                type="password"
+                placeholder="Enter your password"
+                value={formData.password}
+                onChange={handlePasswordChange}
+                autoComplete="new-password"
+                required
+                className={passwordError ? "border-destructive" : ""}
+              />
+              <Button type="button" variant="outline" size="sm" onClick={handleGeneratePassword}>
+                Generate
+              </Button>
+            </div>
+            {passwordError && (
+              <p className="text-sm text-destructive">{passwordError}</p>
+            )}
           </div>
           <div className="space-y-2">
             <Label htmlFor="confirmPassword">Confirm Password</Label>
