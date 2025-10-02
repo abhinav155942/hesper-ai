@@ -23,6 +23,9 @@ const nextConfig: NextConfig = {
         loaders: [LOADER]
       }
     }
+  },
+  experimental: {
+    allowedOrigins: ['*']
   }
 };
 
