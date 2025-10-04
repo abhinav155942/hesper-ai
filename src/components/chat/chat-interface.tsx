@@ -5,6 +5,7 @@ import { useState, useRef, useEffect } from "react";
 import { Send, Mic, RotateCcw, Copy, ThumbsUp, ThumbsDown, Zap, Brain, ChevronDown, ChevronLeft, Upload, MoreHorizontal, FileDown, MailCheck } from 'lucide-react';
 import { toast } from "sonner";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuLabel } from "@/components/ui/dropdown-menu";
+import { MessageContent } from "./MessageContent";
 
 const N8N_WEBHOOK_URL = "/api/hesper/chat";
 
@@ -734,10 +735,10 @@ I'm here to help with a wide range of tasks including answering questions, helpi
 
               }
 
-              // Fallback: plain text content
+              // Render message with markdown support
               return (
-                <div className="whitespace-pre-wrap text-sm leading-relaxed text-foreground bg-slate-50 p-3 rounded-lg border border-border">
-                  {message.content}
+                <div className="bg-slate-50 p-3 rounded-lg border border-border">
+                  <MessageContent content={message.content} />
                 </div>
               );
             })()
