@@ -15,10 +15,10 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "Next.js Dev Server"
+args = "Start Game"
 
 [[workflows.workflow]]
-name = "Next.js Dev Server"
+name = "Start Game"
 author = "agent"
 
 [[workflows.workflow.tasks]]
@@ -32,6 +32,10 @@ outputType = "webview"
 [[ports]]
 localPort = 5000
 externalPort = 80
+
+[[ports]]
+localPort = 38403
+externalPort = 3000
 
 [deployment]
 deploymentTarget = "autoscale"
